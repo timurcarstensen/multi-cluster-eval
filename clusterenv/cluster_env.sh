@@ -18,10 +18,12 @@ _setup_cluster_env() {
         *.leonardo.local)
             echo "Activating environment for cluster: LEONARDO"
             # Note: Variables for leonardo are placeholders.
-            # export HF_HOME="TODO"
-            # export OUTPUT_DIR="TODO"
+            export HF_HOME="/leonardo_work/EUHPC_E03_068/shared_evals/hf_data"
+            export OUTPUT_DIR="/leonardo_work/EUHPC_E03_068/shared_evals/${USER}"
+            export VENV_DIR="/leonardo_work/EUHPC_E03_068/shared_evals/.venv"
+            source $VENV_DIR/bin/activate
             export UV_LINK_MODE=copy
-            echo "Warning: Environment variables for leonardo are not fully configured (TODO)." >&2
+            export PYTHONPATH="/leonardo_work/EUHPC_E03_068/shared_evals/.venv"
             ;;
         *.jureca)
             echo "Activating environment for cluster: JURECA"

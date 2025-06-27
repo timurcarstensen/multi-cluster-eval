@@ -1,0 +1,12 @@
+**/.DS_Store
+**/.venv
+**/.env
+**/.pytest_cache
+**/.ruff_cache
+**/.vscode
+**/__pycache__
+**/*.pyc
+**/*.pyo
+**/*.err
+**/*.log
+**/*.out

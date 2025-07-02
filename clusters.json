@@ -4,7 +4,7 @@
         "vars": {
             "HF_HOME": "/pfs/lustrep4/projappl/project_462000963/evals/hf_data",
             "EVAL_OUTPUT_DIR": "/pfs/lustrep4/projappl/project_462000963/evals/${USER}",
-            "VENV_DIR": "/pfs/lustrep4/projappl/project_462000963/evals/.venv",
+            "EVAL_VENV_DIR": "/pfs/lustrep4/projappl/project_462000963/evals/.venv",
             "UV_LINK_MODE": "copy",
             "PYTHONPATH": "/pfs/lustrep4/projappl/project_462000963/evals/.venv"
         },

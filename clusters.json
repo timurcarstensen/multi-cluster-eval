@@ -1,0 +1,41 @@
+{
+    "uan*": {
+        "name": "LUMI",
+        "vars": {
+            "HF_HOME": "/pfs/lustrep4/projappl/project_462000963/evals/hf_data",
+            "OUTPUT_DIR": "/pfs/lustrep4/projappl/project_462000963/evals/${USER}",
+            "VENV_DIR": "/pfs/lustrep4/projappl/project_462000963/evals/.venv",
+            "UV_LINK_MODE": "copy",
+            "PYTHONPATH": "/pfs/lustrep4/projappl/project_462000963/evals/.venv"
+        },
+        "post_commands": [
+            "source $VENV_DIR/bin/activate"
+        ]
+    },
+    "*.leonardo.local": {
+        "name": "LEONARDO",
+        "vars": {
+            "HF_HOME": "/leonardo_work/EUHPC_E03_068/shared_evals/hf_data",
+            "OUTPUT_DIR": "/leonardo_work/EUHPC_E03_068/shared_evals/${USER}",
+            "VENV_DIR": "/leonardo_work/EUHPC_E03_068/shared_evals/.venv",
+            "UV_LINK_MODE": "copy",
+            "PYTHONPATH": "/leonardo_work/EUHPC_E03_068/shared_evals/.venv"
+        },
+        "post_commands": [
+            "source $VENV_DIR/bin/activate"
+        ]
+    },
+    "*.jureca": {
+        "name": "JURECA",
+        "vars": {
+            "HF_HOME": "/p/data1/mmlaion/oellm_shared_evals/hf_data",
+            "OUTPUT_DIR": "/p/data1/mmlaion/oellm_shared_evals/${USER}",
+            "VENV_DIR": "/p/data1/mmlaion/oellm_shared_evals/.venv",
+            "UV_LINK_MODE": "copy",
+            "PYTHONPATH": "/p/data1/mmlaion/oellm_shared_evals/.venv"
+        },
+        "post_commands": [
+            "source $VENV_DIR/bin/activate"
+        ]
+    }
+}

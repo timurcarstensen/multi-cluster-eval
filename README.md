@@ -8,7 +8,7 @@
 ## Usage
 > Make sure that your HF_TOKEN is in your environment, otherwise you may be rated limited when pulling new evaluation datasets
 
-1. Clone this repository
+1. git clone `https://github.com/OpenEuroLLM/multi-cluster-eval.git`
 2. `cd multi-cluster-eval`
 3. `source cluster_env.sh` -> sets all relevant environment variables and activates the python environment
 4. Start an interactive session, e.g., `srun -p <partition-name> -t <time-limit> --gres="gpu:1" --pty <your-shell e.g., /bin/bash>`

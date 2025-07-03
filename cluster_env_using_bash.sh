@@ -27,13 +27,8 @@ _setup_cluster_env_from_bash() {
     for entry in "${map[@]}"; do
         local pattern="${entry%%:*}"
         local cluster_script_name="${entry#*:}"
-        # Convert glob to regex: escape dots, replace * with .*
         regex="${pattern//./\\.}"
         regex="${regex//\*/.*}"
-        echo "pattern: $pattern"
-        echo "cluster_script_name: $cluster_script_name"
-        echo "CURRENT_HOSTNAME: $CURRENT_HOSTNAME"
-        # Using regex matching against the hostname
         if [[ "$CURRENT_HOSTNAME" =~ ^$regex$ ]]; then
             local cluster_script="$CLUSTERS_DIR/$cluster_script_name"
 

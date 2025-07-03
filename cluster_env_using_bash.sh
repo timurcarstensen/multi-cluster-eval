@@ -3,25 +3,17 @@
 # Source this file to set the environment variables for the current cluster
 # e.g., `source cluster_env_using_bash.sh`
 
-# Using two indexed arrays for portability between bash and zsh.
-patterns=(
-    "*.leonardo.local"
-    "*.jureca"
-    "uan*"
-)
-scripts=(
-    "leonardo.sh"
-    "jureca.sh"
-    "lumi.sh"
+# Using a single array of paired values for portability.
+map=(
+    "*.leonardo.local:leonardo.sh"
+    "*.jureca:jureca.sh"
+    "uan*:lumi.sh"
 )
 
 _setup_cluster_env_from_bash() {
     local CURRENT_HOSTNAME
     CURRENT_HOSTNAME=$(hostname)
     local CLUSTERS_DIR
-    # Portable way to get script's directory when sourced in bash or zsh.
-    # In bash, $BASH_SOURCE on its own refers to the first element of the
-    # BASH_SOURCE array. In zsh, BASH_SOURCE is unset, so it falls back to $0.
     local script_path="${BASH_SOURCE:-$0}"
     CLUSTERS_DIR="$(dirname "$script_path")/clusters"
 
@@ -32,11 +24,11 @@ _setup_cluster_env_from_bash() {
     fi
 
     local cluster_found=false
-    for i in "${!patterns[@]}"; do
-        local pattern="${patterns[i]}"
+    for entry in "${map[@]}"; do
+        local pattern="${entry%%:*}"
+        local cluster_script_name="${entry#*:}"
         # Using == for glob matching against the hostname
         if [[ "$CURRENT_HOSTNAME" == $pattern ]]; then
-            local cluster_script_name="${scripts[i]}"
             local cluster_script="$CLUSTERS_DIR/$cluster_script_name"
 
             if [ ! -f "$cluster_script" ]; then
@@ -59,5 +51,4 @@ _setup_cluster_env_from_bash() {
 
 _setup_cluster_env_from_bash
 unset -f _setup_cluster_env_from_bash
-unset patterns
-unset scripts 
+unset map 

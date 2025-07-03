@@ -17,7 +17,6 @@ _setup_cluster_env_from_bash() {
     local script_path="${BASH_SOURCE:-$0}"
     CLUSTERS_DIR="$(dirname "$script_path")/clusters"
 
-
     if [ ! -d "$CLUSTERS_DIR" ]; then
         echo "Error: Clusters directory '$CLUSTERS_DIR' not found." >&2
         return 1
@@ -37,7 +36,6 @@ _setup_cluster_env_from_bash() {
                 return 1
             fi
             echo "Activating environment from $cluster_script"
-            # shellcheck source=/dev/null
             source "$cluster_script"
             cluster_found=true
             break

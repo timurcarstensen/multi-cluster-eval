@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# source this file to set the environment variables for the current cluster
+# e.g., `source cluster_env.sh`
+# or `source cluster_env.sh --overwrite` to overwrite existing variables
 
 _setup_cluster_env() {
     local overwrite_vars=false

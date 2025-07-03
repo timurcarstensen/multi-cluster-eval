@@ -46,8 +46,7 @@ _setup_cluster_env_from_bash() {
             source "$cluster_script"
             cluster_found=true
             break
-            ;;
-        esac
+        fi
     done
 
     if [ "$cluster_found" = false ]; then

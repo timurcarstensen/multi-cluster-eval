@@ -3,20 +3,29 @@
 # Source this file to set the environment variables for the current cluster
 # e.g., `source cluster_env_using_bash.sh`
 
-# Using an associative array for the pattern map.
-# Keys are glob patterns for hostnames, values are the script files to source.
-declare -A pattern_map
-pattern_map=(
-    ["*.leonardo.local"]="leonardo.sh"
-    ["*.jureca"]="jureca.sh"
-    ["uan*"]="lumi.sh"
+# Using two indexed arrays for portability between bash and zsh.
+patterns=(
+    "*.leonardo.local"
+    "*.jureca"
+    "uan*"
+)
+scripts=(
+    "leonardo.sh"
+    "jureca.sh"
+    "lumi.sh"
 )
 
 _setup_cluster_env_from_bash() {
     local CURRENT_HOSTNAME
     CURRENT_HOSTNAME=$(hostname)
     local CLUSTERS_DIR
-    CLUSTERS_DIR="$(dirname "${BASH_SOURCE[0]}")/clusters"
+    # Portable way to get script's directory when sourced in bash or zsh.
+    # In zsh, inside a function, $0 is the path to the sourced script.
+    # In bash, ${BASH_SOURCE[0]} is the path. This uses the latter if set,
+    # otherwise falls back to the former.
+    local script_path="${BASH_SOURCE[0]:-$0}"
+    CLUSTERS_DIR="$(dirname "$script_path")/clusters"
+
 
     if [ ! -d "$CLUSTERS_DIR" ]; then
         echo "Error: Clusters directory '$CLUSTERS_DIR' not found." >&2
@@ -24,10 +33,11 @@ _setup_cluster_env_from_bash() {
     fi
 
     local cluster_found=false
-    for pattern in "${!pattern_map[@]}"; do
+    for i in "${!patterns[@]}"; do
+        local pattern="${patterns[i]}"
         # Using == for glob matching against the hostname
         if [[ "$CURRENT_HOSTNAME" == $pattern ]]; then
-            local cluster_script_name="${pattern_map[$pattern]}"
+            local cluster_script_name="${scripts[i]}"
             local cluster_script="$CLUSTERS_DIR/$cluster_script_name"
 
             if [ ! -f "$cluster_script" ]; then
@@ -49,4 +59,6 @@ _setup_cluster_env_from_bash() {
 }
 
 _setup_cluster_env_from_bash
-unset -f _setup_cluster_env_from_bash 
+unset -f _setup_cluster_env_from_bash
+unset patterns
+unset scripts 

@@ -20,10 +20,9 @@ _setup_cluster_env_from_bash() {
     CURRENT_HOSTNAME=$(hostname)
     local CLUSTERS_DIR
     # Portable way to get script's directory when sourced in bash or zsh.
-    # In zsh, inside a function, $0 is the path to the sourced script.
-    # In bash, ${BASH_SOURCE[0]} is the path. This uses the latter if set,
-    # otherwise falls back to the former.
-    local script_path="${BASH_SOURCE[0]:-$0}"
+    # In bash, $BASH_SOURCE on its own refers to the first element of the
+    # BASH_SOURCE array. In zsh, BASH_SOURCE is unset, so it falls back to $0.
+    local script_path="${BASH_SOURCE:-$0}"
     CLUSTERS_DIR="$(dirname "$script_path")/clusters"
 
 

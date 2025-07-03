@@ -3,6 +3,14 @@
 # Source this file to set the environment variables for the current cluster
 # e.g., `source cluster_env_using_bash.sh`
 
+# Using an associative array for the pattern map.
+# Keys are glob patterns for hostnames, values are the script files to source.
+declare -A pattern_map
+pattern_map=(
+    ["*.leonardo.local"]="leonardo.sh"
+    ["*.jureca"]="jureca.sh"
+)
+
 _setup_cluster_env_from_bash() {
     local CURRENT_HOSTNAME
     CURRENT_HOSTNAME=$(hostname)
@@ -15,17 +23,16 @@ _setup_cluster_env_from_bash() {
     fi
 
     local cluster_found=false
-    for cluster_script in "$CLUSTERS_DIR"/*.sh; do
-        if [ ! -f "$cluster_script" ]; then
-            continue
-        fi
-
-        # The glob pattern is the filename without the .sh extension
-        local pattern
-        pattern=$(basename "$cluster_script" .sh)
-
+    for pattern in "${!pattern_map[@]}"; do
         # Using == for glob matching against the hostname
         if [[ "$CURRENT_HOSTNAME" == $pattern ]]; then
+            local cluster_script_name="${pattern_map[$pattern]}"
+            local cluster_script="$CLUSTERS_DIR/$cluster_script_name"
+
+            if [ ! -f "$cluster_script" ]; then
+                echo "Error: Cluster script '$cluster_script' not found for pattern '$pattern'." >&2
+                return 1
+            fi
             echo "Activating environment from $cluster_script"
             # shellcheck source=/dev/null
             source "$cluster_script"

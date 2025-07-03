@@ -9,7 +9,7 @@ declare -A pattern_map
 pattern_map=(
     ["*.leonardo.local"]="leonardo.sh"
     ["*.jureca"]="jureca.sh"
-    ["*.uan"]="lumi.sh"
+    ["uan*"]="lumi.sh"
 )
 
 _setup_cluster_env_from_bash() {

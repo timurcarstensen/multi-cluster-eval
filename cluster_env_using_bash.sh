@@ -27,8 +27,9 @@ _setup_cluster_env_from_bash() {
     for entry in "${map[@]}"; do
         local pattern="${entry%%:*}"
         local cluster_script_name="${entry#*:}"
-        # Using == for glob matching against the hostname
-        if [[ "$CURRENT_HOSTNAME" == $pattern ]]; then
+        # Using a case statement for glob matching against the hostname
+        case "$CURRENT_HOSTNAME" in
+        $pattern)
             local cluster_script="$CLUSTERS_DIR/$cluster_script_name"
 
             if [ ! -f "$cluster_script" ]; then
@@ -40,7 +41,8 @@ _setup_cluster_env_from_bash() {
             source "$cluster_script"
             cluster_found=true
             break
-        fi
+            ;;
+        esac
     done
 
     if [ "$cluster_found" = false ]; then

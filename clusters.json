@@ -5,6 +5,9 @@
             "HF_HOME": "/pfs/lustrep4/projappl/project_462000963/evals/hf_data",
             "EVAL_OUTPUT_DIR": "/pfs/lustrep4/projappl/project_462000963/evals/${USER}",
             "EVAL_VENV_DIR": "/pfs/lustrep4/projappl/project_462000963/evals/.venv",
+            "DEFAULT_PARTITION": "dev-g",
+            "EVAL_TIME_LIMIT": "00:30:00",
+            "NUM_GPU_PER_NODE": 1,
             "UV_LINK_MODE": "copy",
             "PYTHONPATH": "/pfs/lustrep4/projappl/project_462000963/evals/.venv"
         },
@@ -18,6 +21,9 @@
             "HF_HOME": "/leonardo_work/EUHPC_E03_068/shared_evals/hf_data",
             "EVAL_OUTPUT_DIR": "/leonardo_work/EUHPC_E03_068/shared_evals/${USER}",
             "EVAL_VENV_DIR": "/leonardo_work/EUHPC_E03_068/shared_evals/.venv",
+            "DEFAULT_PARTITION": "boost_usr_prod",
+            "EVAL_TIME_LIMIT": "00:30:00",
+            "NUM_GPU_PER_NODE": 1,
             "UV_LINK_MODE": "copy",
             "PYTHONPATH": "/leonardo_work/EUHPC_E03_068/shared_evals/.venv"
         },
@@ -31,6 +37,9 @@
             "HF_HOME": "/p/data1/mmlaion/oellm_shared_evals/hf_data",
             "EVAL_OUTPUT_DIR": "/p/data1/mmlaion/oellm_shared_evals/${USER}",
             "EVAL_VENV_DIR": "/p/data1/mmlaion/oellm_shared_evals/.venv",
+            "DEFAULT_PARTITION": "dc-gpu-devel",
+            "EVAL_TIME_LIMIT": "00:30:00",
+            "NUM_GPU_PER_NODE": 1,
             "UV_LINK_MODE": "copy",
             "PYTHONPATH": "/p/data1/mmlaion/oellm_shared_evals/.venv"
         },

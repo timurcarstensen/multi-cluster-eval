@@ -24,12 +24,11 @@ We also aim to support the following:
 
 
 The following clusters are currently supported:
-- LEONARDO
-- LUMI
-- JURECA
+- ✅ LEONARDO
+- ✅ LUMI
+- ✅ JURECA
 
 ## Usage
-
 
 To install do:
 ```bash
@@ -52,4 +51,5 @@ lm_eval --model hf --model_args pretrained=EleutherAI/pythia-160m,revision=step1
 
 This will use the shared huggingface datasets directory at `$HF_HOME` and store the eval results in the shared output directory in `$EVAL_OUTPUT_DIR`
 
-> Note: You may need to set your HF_TOKEN in case you get a rate limit when pulling new datasets.
+> ⚠️ The tool assumes that you are into the logging node of one of the EuroHPC cluster. 
+> ⚠️ You may need to set your HF_TOKEN in case you get a rate limit when pulling new datasets.

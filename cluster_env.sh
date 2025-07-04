@@ -46,44 +46,47 @@ _setup_cluster_env_from_bash() {
     fi
 
     local cluster_found=false
+    local cluster_script
     for entry in "${map[@]}"; do
         local pattern="${entry%%:*}"
         local cluster_script_name="${entry#*:}"
         regex="${pattern//./\\.}"
         regex="${regex//\*/.*}"
         if [[ "$CURRENT_HOSTNAME" =~ ^$regex$ ]]; then
-            local cluster_script="$CLUSTERS_DIR/$cluster_script_name"
+            cluster_script="$CLUSTERS_DIR/$cluster_script_name"
 
             if [ ! -f "$cluster_script" ] && [ "$verbose" = true ]; then
                 echo "Error: Cluster script '$cluster_script' not found for pattern '$pattern'." >&2
                 return 1
             fi
-            if [ "$verbose" = true ]; then
-                echo "Activating environment from $cluster_script"
-            fi
-            
-            # source the cluster script for environment variables
-            source "$cluster_script"
-            
-            # export shared environment variables
-            _set_common_env_vars
-
-            # activate the virtual environment
-            if [ "$activate" = true ]; then
-                if [ "$verbose" = true ]; then
-                    echo "Activating Python virtual environment in ${EVAL_VENV_DIR}"
-                fi
-                source "${EVAL_VENV_DIR}/bin/activate"
-            fi
             cluster_found=true
             break
         fi
     done
-
+    
     if [ "$cluster_found" = false ] && [ "$verbose" = true ]; then
         echo "No matching cluster environment script found for hostname '$CURRENT_HOSTNAME' in '$CLUSTERS_DIR'" >&2
         return 1
     fi
+
+    if [ "$verbose" = true ]; then
+        echo "Activating environment from $cluster_script"
+    fi
+    
+    # source the cluster script for environment variables
+    source "$cluster_script"
+    
+    # export shared environment variables
+    _set_common_env_vars
+
+    # activate the virtual environment
+    if [ "$activate" = true ]; then
+        if [ "$verbose" = true ]; then
+            echo "Activating Python virtual environment in ${EVAL_VENV_DIR}"
+        fi
+        source "${EVAL_VENV_DIR}/bin/activate"
+    fi
+
 }
 
 _setup_cluster_env_from_bash "$@"

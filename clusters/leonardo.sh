@@ -10,5 +10,3 @@ export EVAL_TIME_LIMIT="00:30:00"
 export NUM_GPU_PER_NODE=1
 export UV_LINK_MODE="copy"
 export PYTHONPATH="${EVAL_BASE_DIR}/.venv"
-
-source "${EVAL_VENV_DIR}/bin/activate"

@@ -43,7 +43,11 @@ _setup_cluster_env_from_bash() {
             if [ "$verbose" = true ]; then
                 echo "Activating environment from $cluster_script"
             fi
+            # source the cluster script for environment variables
             source "$cluster_script"
+            
+            # activate the virtual environment
+            "${EVAL_VENV_DIR}/bin/activate"
             cluster_found=true
             break
         fi

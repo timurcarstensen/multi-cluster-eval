@@ -11,6 +11,11 @@ map=(
 )
 
 _setup_cluster_env_from_bash() {
+    local verbose=false
+    if [ "$1" = "--verbose" ]; then
+        verbose=true
+    fi
+
     local CURRENT_HOSTNAME
     CURRENT_HOSTNAME=$(hostname)
     local CLUSTERS_DIR
@@ -31,23 +36,25 @@ _setup_cluster_env_from_bash() {
         if [[ "$CURRENT_HOSTNAME" =~ ^$regex$ ]]; then
             local cluster_script="$CLUSTERS_DIR/$cluster_script_name"
 
-            if [ ! -f "$cluster_script" ]; then
+            if [ ! -f "$cluster_script" ] && [ "$verbose" = true ]; then
                 echo "Error: Cluster script '$cluster_script' not found for pattern '$pattern'." >&2
                 return 1
             fi
-            echo "Activating environment from $cluster_script"
+            if [ "$verbose" = true ]; then
+                echo "Activating environment from $cluster_script"
+            fi
             source "$cluster_script"
             cluster_found=true
             break
         fi
     done
 
-    if [ "$cluster_found" = false ]; then
+    if [ "$cluster_found" = false ] && [ "$verbose" = true ]; then
         echo "No matching cluster environment script found for hostname '$CURRENT_HOSTNAME' in '$CLUSTERS_DIR'" >&2
         return 1
     fi
 }
 
-_setup_cluster_env_from_bash
+_setup_cluster_env_from_bash "$@"
 unset -f _setup_cluster_env_from_bash
 unset map 

@@ -10,6 +10,16 @@ map=(
     "uan*:lumi.sh"
 )
 
+_set_common_env_vars() {
+    export EVAL_TIME_LIMIT="00:30:00"
+    export NUM_GPU_PER_NODE=1
+    export UV_LINK_MODE="copy"
+    export PYTHONPATH="${EVAL_BASE_DIR}/.venv"
+    export HF_HOME="${EVAL_BASE_DIR}/hf_data"
+    export EVAL_OUTPUT_DIR="${EVAL_BASE_DIR}/${USER}"
+    export EVAL_VENV_DIR="${EVAL_BASE_DIR}/.venv"
+}
+
 _setup_cluster_env_from_bash() {
     local verbose=false
     if [ "$1" = "--verbose" ]; then
@@ -43,11 +53,15 @@ _setup_cluster_env_from_bash() {
             if [ "$verbose" = true ]; then
                 echo "Activating environment from $cluster_script"
             fi
+            
             # source the cluster script for environment variables
             source "$cluster_script"
             
+            # export shared environment variables
+            _set_common_env_vars
+
             # activate the virtual environment
-            "${EVAL_VENV_DIR}/bin/activate"
+            source "${EVAL_VENV_DIR}/bin/activate"
             cluster_found=true
             break
         fi

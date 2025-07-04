@@ -70,7 +70,7 @@ _setup_cluster_env_from_bash() {
     fi
 
     if [ "$verbose" = true ]; then
-        echo "Activating environment from $cluster_script"
+        echo "Loading environment variables from $cluster_script"
     fi
     
     # source the cluster script for environment variables

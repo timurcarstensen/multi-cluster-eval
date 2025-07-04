@@ -39,7 +39,7 @@ You can then run:
 
 ```bash
 # Setup environment variables
-source multi-cluster-eval/cluster_env.sh
+source multi-cluster-eval/cluster_env.sh --activate
 
 
 # Starts an interactive session with gpu on the default partition/account for the cluster

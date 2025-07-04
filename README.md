@@ -46,8 +46,6 @@ source multi-cluster-eval/cluster_env.sh --activate
 srun -p $DEFAULT_PARTITION -t $EVAL_TIME_LIMIT --account $DEFAULT_ACCOUNT --gres="gpu:$NUM_GPU_PER_NODE" --pty /bin/bash
 
 
-# Once the node is available, sets environment variables spin-up an evaluation
-source multi-cluster-eval/cluster_env.sh --activate
 lm_eval --model hf --model_args pretrained=EleutherAI/pythia-160m,revision=step100000,dtype="float," --tasks mmlu --output_path $EVAL_OUTPUT_DIR
 ```
 

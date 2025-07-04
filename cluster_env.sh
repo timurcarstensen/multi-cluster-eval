@@ -1,9 +1,9 @@
 #!/bin/bash
 
 # Source this file to set the environment variables for the current cluster
-# e.g., `source cluster_env_using_bash.sh`
+# e.g., `source cluster_env.sh`
 
-# Using a single array of paired values for portability.
+# map from hostname pattern to cluster script name
 map=(
     "*.leonardo.local:leonardo.sh"
     "*.jureca:jureca.sh"

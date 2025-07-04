@@ -1,3 +1,5 @@
+# LUMI specific environment variables
+
 export BASE_DIR="/pfs/lustrep4/projappl/project_462000963/evals"
 export HF_HOME="${BASE_DIR}/hf_data"
 export EVAL_OUTPUT_DIR="${BASE_DIR}/${USER}"

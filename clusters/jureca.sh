@@ -1,3 +1,5 @@
+# JURECA specific environment variables
+
 export BASE_DIR="/p/data1/mmlaion/oellm_shared_evals"
 export HF_HOME="${BASE_DIR}/hf_data"
 export EVAL_OUTPUT_DIR="${BASE_DIR}/${USER}"

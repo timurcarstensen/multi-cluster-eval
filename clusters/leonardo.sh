@@ -1,3 +1,5 @@
+# LEONARDO specific environment variables
+
 export EVAL_BASE_DIR="/leonardo_work/EUHPC_E03_068/shared_evals"
 export HF_HOME="${EVAL_BASE_DIR}/hf_data"
 export EVAL_OUTPUT_DIR="${EVAL_BASE_DIR}/${USER}"

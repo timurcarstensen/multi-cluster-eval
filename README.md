@@ -3,7 +3,7 @@
 This package allows to set environment variables in the same way across EuroHPC clusters.
 The goal is to avoid duplicating pre-training/evaluation scripts and rather only depends on cluster-specific environment variables.
 
-Currently, we only supported limited variables which allows to run easily evaluations across clusters:
+Currently, we support the following environment variables which allows to run easily evaluations across clusters:
 * DEFAULT_PARTITION
 * DEFAULT_ACCOUNT
 * NUM_GPU_PER_NODE
@@ -23,7 +23,7 @@ We also aim to support the following:
 * Wandb account
 
 
-## Currently supported clusters
+The following clusters are currently supported:
 - LEONARDO
 - LUMI
 - JURECA

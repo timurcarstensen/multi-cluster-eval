@@ -22,9 +22,17 @@ _set_common_env_vars() {
 
 _setup_cluster_env_from_bash() {
     local verbose=false
-    if [ "$1" = "--verbose" ]; then
-        verbose=true
-    fi
+    local activate=false
+    for arg in "$@"; do
+        case $arg in
+            --verbose)
+            verbose=true
+            ;;
+            --activate)
+            activate=true
+            ;;
+        esac
+    done
 
     local CURRENT_HOSTNAME
     CURRENT_HOSTNAME=$(hostname)
@@ -61,7 +69,12 @@ _setup_cluster_env_from_bash() {
             _set_common_env_vars
 
             # activate the virtual environment
-            source "${EVAL_VENV_DIR}/bin/activate"
+            if [ "$activate" = true ]; then
+                if [ "$verbose" = true ]; then
+                    echo "Activating Python virtual environment in ${EVAL_VENV_DIR}"
+                fi
+                source "${EVAL_VENV_DIR}/bin/activate"
+            fi
             cluster_found=true
             break
         fi

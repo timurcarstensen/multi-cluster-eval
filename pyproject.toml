@@ -6,11 +6,13 @@ readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
     "pandas",
-    "huggingface-hub",
+    "transformers",
+    "jsonargparse",
+    "torch",
 ]
 
 [project.scripts]
-main = "oellm.main:main"
+oellm = "oellm.main:main"
 
 [build-system]
 requires = ["uv_build>=0.7.19,<0.8.0"]

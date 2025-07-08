@@ -3,6 +3,7 @@ from pathlib import Path
 import logging
 import subprocess
 import os
+import tempfile
 
 import pandas as pd
 from jsonargparse import CLI
@@ -34,6 +35,7 @@ def schedule_evals(
     tasks: str,
     n_shot: int,
     max_array_len: int,
+    debug: bool = False,
 ) -> pd.DataFrame | None:
     model_paths = []
     # parse models into either local paths or huggingface models
@@ -61,25 +63,32 @@ def schedule_evals(
             logging.debug(
                 f"Downloading model {model} on the login node since the compute nodes may not have access to the internet"
             )
-            if "," in model:
-                model_kwargs = {
-                    k: v
-                    for k, v in [kv.split("=") for kv in model.split(",") if "=" in kv]
-                }
-                model_kwargs["pretrained_model_name_or_path"] = model.split(",")[0]
-                try:
-                    AutoModelForCausalLM.from_pretrained(**model_kwargs)
-                    model_paths.append(model_path)
-                except Exception as e:
-                    logging.debug(
-                        f"Failed to download model {model} from huggingface. Continuing..."
-                    )
-                    logging.debug(e)
-            else:
-                AutoModelForCausalLM.from_pretrained(model)
-                model_paths.append(model_path)
 
-    tasks = tasks.split(";")
+            # TODO: remove later
+            if not debug:
+                if "," in model:
+                    model_kwargs = {
+                        k: v
+                        for k, v in [
+                            kv.split("=") for kv in model.split(",") if "=" in kv
+                        ]
+                    }
+                    model_kwargs["pretrained_model_name_or_path"] = model.split(",")[0]
+                    try:
+                        AutoModelForCausalLM.from_pretrained(**model_kwargs)
+                        model_paths.append(model_path)
+                    except Exception as e:
+                        logging.debug(
+                            f"Failed to download model {model} from huggingface. Continuing..."
+                        )
+                        logging.debug(e)
+                else:
+                    AutoModelForCausalLM.from_pretrained(model)
+                    model_paths.append(model_path)
+            else:
+                model_paths.append(model)
+
+    tasks = tasks.split(",")
 
     # cross product of model_paths and tasks into a dataframe
     df = pd.DataFrame(
@@ -87,52 +96,68 @@ def schedule_evals(
         columns=["model_path", "task_path", "n_shot"],
     )
 
-    # check if the user queue load is too high
-    # user_queue_load = _parse_user_queue_load()
-    # if user_queue_load > os.getenv("QUEUE_LIMIT"):
-    #     raise RuntimeError(
-    #         f"The user queue load is too high. Detected {user_queue_load} "
-    #         f"running or pending jobs in the queue, max allowed is {max_array_len}. "
-    #         f"Please wait for some jobs to finish or reduce the number of jobs you are running."
-    #     )
+    if debug:
+        remaining_queue_capacity = 10
+    else:
+        queue_limit = int(os.environ.get("QUEUE_LIMIT", 250))
+        remaining_queue_capacity = queue_limit - _parse_user_queue_load()
 
-    remaining_queue_capacity = os.getenv("QUEUE_LIMIT") - _parse_user_queue_load()
+    if remaining_queue_capacity <= 0:
+        logging.warning("No remaining queue capacity. Not scheduling any jobs.")
+        return None
+
     logging.debug(
-        f"Remaining capacity in the array: {remaining_queue_capacity}. Number of "
-        f"evals to schedule: {len(df)} with {len(df) / remaining_queue_capacity} evals per job."
+        f"Remaining capacity in the queue: {remaining_queue_capacity}. Number of "
+        f"evals to schedule: {len(df)}."
     )
 
-    # distribute indices of df into chunks of size remaining_capacity (e.g., each job gets total_evals / remaining_capacity evals)
+    # Save df to temporary CSV file
+    with tempfile.NamedTemporaryFile(
+        mode="w", suffix=".csv", delete=False, delete_on_close=False
+    ) as temp_file:
+        df.to_csv(temp_file.name, index=False)
+        temp_csv_path = temp_file.name
 
-    # Calculate how many evals each job should handle
-    evals_per_job = max(1, len(df) // remaining_queue_capacity)
+    logging.debug(f"Saved evaluation dataframe to temporary CSV: {temp_csv_path}")
 
-    # Create chunks of indices for each job
-    chunks = []
-    for i in range(0, len(df), evals_per_job):
-        chunk = df.iloc[i : i + evals_per_job]
-        chunks.append(chunk)
+    with open(Path(__file__).parent / "template.sbatch", "r") as f:
+        sbatch_template = f.read()
 
-    # If we have more chunks than remaining capacity, adjust the last chunk
-    if len(chunks) > remaining_queue_capacity:
-        # Merge excess chunks into the last allowed chunk
-        excess_chunks = chunks[remaining_queue_capacity:]
-        chunks = chunks[:remaining_queue_capacity]
-        chunks[-1] = pd.concat([chunks[-1]] + excess_chunks, ignore_index=True)
+    # replace the placeholders in the template with the actual values
+    sbatch_script = sbatch_template.format(
+        csv_path=temp_csv_path,
+        max_array_len=max_array_len,
+        array_limit=remaining_queue_capacity - 1,
+        num_jobs=remaining_queue_capacity,
+    )
 
-    # Store the chunks in df for later use
-    df["chunk_id"] = -1  # Initialize chunk_id column
-    for chunk_idx, chunk in enumerate(chunks):
-        df.loc[chunk.index, "chunk_id"] = chunk_idx
+    logging.debug("--- Generated sbatch script ---")
+    logging.debug(sbatch_script)
+    logging.debug("-------------------------------")
 
-    import pdb
-
-    pdb.set_trace()
-    logging.info(f"Distributed {len(df)} evaluations into {len(chunks)} chunks")
+    # Submit the job script to slurm by piping the script content to sbatch
+    try:
+        result = subprocess.run(
+            ["sbatch"],
+            input=sbatch_script,
+            text=True,
+            check=True,
+            capture_output=True,
+        )
+        logging.info("Job submitted successfully.")
+        logging.info(result.stdout)
+    except subprocess.CalledProcessError as e:
+        logging.error(f"Failed to submit job: {e}")
+        logging.error(f"sbatch stderr: {e.stderr}")
+    except FileNotFoundError:
+        logging.error(
+            "sbatch command not found. Please make sure you are on a system with SLURM installed."
+        )
 
     return df
 
 
 def main():
+    logging.basicConfig(level=logging.DEBUG)
     """The main entrypoint for the CLI."""
-    CLI(schedule_evals, as_positional=False)
+    CLI({"schedule": schedule_evals}, as_positional=False)

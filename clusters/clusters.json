@@ -1,0 +1,32 @@
+{
+    "shared": {
+        "time_limit": "00:30:00",
+        "gpus_per_node": 1,
+        "uv_link_mode": "copy",
+        "python_path": "{eval_base_dir}/.venv",
+        "hf_home": "{eval_base_dir}/hf_data",
+        "output_dir": "{eval_base_dir}/{user}",
+        "venv_dir": "{eval_base_dir}/.venv"
+    },
+    "leonardo": {
+        "hostname_pattern": "*.leonardo.local",
+        "eval_base_dir": "/leonardo_work/EUHPC_E03_068/shared_evals",
+        "partition": "boost_usr_prod",
+        "account": "AIFAC_L01_028",
+        "queue_limit": 1000
+    },
+    "jureca": {
+        "hostname_pattern": "*.jureca",
+        "eval_base_dir": "/p/data1/mmlaion/oellm_shared_evals",
+        "partition": "dc-gpu",
+        "account": "synthlaion",
+        "queue_limit": 512
+    },
+    "lumi": {
+        "hostname_pattern": "uan*",
+        "eval_base_dir": "/pfs/lustrep4/projappl/project_462000963/evals",
+        "partition": "small-g",
+        "account": "project_462000963",
+        "queue_limit": 210
+    }
+}

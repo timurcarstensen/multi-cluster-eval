@@ -3,23 +3,6 @@
 # Source this file to set the environment variables for the current cluster
 # e.g., `source cluster_env.sh`
 
-# map from hostname pattern to cluster script name
-map=(
-    "*.leonardo.local:leonardo.sh"
-    "*.jureca:jureca.sh"
-    "uan*:lumi.sh"
-)
-
-_set_common_env_vars() {
-    export EVAL_TIME_LIMIT="00:30:00"
-    export NUM_GPU_PER_NODE=1
-    export UV_LINK_MODE="copy"
-    export PYTHONPATH="${EVAL_BASE_DIR}/.venv"
-    export HF_HOME="${EVAL_BASE_DIR}/hf_data"
-    export EVAL_OUTPUT_DIR="${EVAL_BASE_DIR}/${USER}"
-    export EVAL_VENV_DIR="${EVAL_BASE_DIR}/.venv"
-}
-
 _setup_cluster_env_from_bash() {
     local verbose=false
     local activate=false
@@ -34,61 +17,74 @@ _setup_cluster_env_from_bash() {
         esac
     done
 
-    local CURRENT_HOSTNAME
-    CURRENT_HOSTNAME=$(hostname)
-    local CLUSTERS_DIR
-    local script_path="${BASH_SOURCE:-$0}"
-    CLUSTERS_DIR="$(dirname "$script_path")/clusters"
+    local script_path
+    script_path="${BASH_SOURCE:-$0}"
+    local root_dir
+    root_dir="$(dirname "$script_path")"
+    local config_file="$root_dir/clusters/clusters.json"
 
-    if [ ! -d "$CLUSTERS_DIR" ]; then
-        echo "Error: Clusters directory '$CLUSTERS_DIR' not found." >&2
+    if [ ! -f "$config_file" ]; then
+        echo "Error: Configuration file '$config_file' not found." >&2
         return 1
     fi
 
-    local cluster_found=false
-    local cluster_script
-    for entry in "${map[@]}"; do
-        local pattern="${entry%%:*}"
-        local cluster_script_name="${entry#*:}"
+    local current_hostname
+    current_hostname=$(hostname)
+
+    # get all top-level keys except shared
+    local clusters
+    clusters=$(jq -r 'keys[] | select(. != "shared")' "$config_file")
+    
+    local matching_cluster
+    for cluster_name in $clusters; do
+        local pattern
+        pattern=$(jq -r --arg cn "$cluster_name" '.[$cn].hostname_pattern' "$config_file")
+        
+        local regex
         regex="${pattern//./\\.}"
         regex="${regex//\*/.*}"
-        if [[ "$CURRENT_HOSTNAME" =~ ^$regex$ ]]; then
-            cluster_script="$CLUSTERS_DIR/$cluster_script_name"
-
-            if [ ! -f "$cluster_script" ] && [ "$verbose" = true ]; then
-                echo "Error: Cluster script '$cluster_script' not found for pattern '$pattern'." >&2
-                return 1
-            fi
-            cluster_found=true
+        
+        if [[ "$current_hostname" =~ ^$regex$ ]]; then
+            matching_cluster=$cluster_name
             break
         fi
     done
-    
-    if [ "$cluster_found" = false ] && [ "$verbose" = true ]; then
-        echo "No matching cluster environment script found for hostname '$CURRENT_HOSTNAME' in '$CLUSTERS_DIR'" >&2
+
+    if [ -z "$matching_cluster" ]; then
+        echo "No matching cluster environment found for hostname '$current_hostname'" >&2
         return 1
     fi
-
+    
     if [ "$verbose" = true ]; then
-        echo "Loading environment variables from $cluster_script"
+        echo "Loading environment for cluster '$matching_cluster'"
     fi
-    
-    # source the cluster script for environment variables
-    source "$cluster_script"
-    
-    # export shared environment variables
-    _set_common_env_vars
+
+    # Merge shared and cluster-specific settings and export them
+    local merged_config
+    merged_config=$(jq -s --arg cn "$matching_cluster" '.[0].shared * .[0][$cn]' "$config_file")
+
+    # Export all keys from the merged config as environment variables
+    for key in $(echo "$merged_config" | jq -r 'keys[]'); do
+        value=$(echo "$merged_config" | jq -r --arg k "$key" '.[$k]')
+        export "$(echo "$key" | tr '[:lower:]' '[:upper:]')"="$value"
+    done
+
+    # Substitute variables
+    export PYTHON_PATH="${EVAL_BASE_DIR}/.venv"
+    export HF_HOME="${EVAL_BASE_DIR}/hf_data"
+    export OUTPUT_DIR="${EVAL_BASE_DIR}/${USER}"
+    export VENV_DIR="${EVAL_BASE_DIR}/.venv"
 
     # activate the virtual environment
     if [ "$activate" = true ]; then
         if [ "$verbose" = true ]; then
-            echo "Activating Python virtual environment in ${EVAL_VENV_DIR}"
+            echo "Activating Python virtual environment in ${VENV_DIR}"
         fi
-        source "${EVAL_VENV_DIR}/bin/activate"
+        # shellcheck disable=SC1090
+        source "${VENV_DIR}/bin/activate"
     fi
 
 }
 
 _setup_cluster_env_from_bash "$@"
-unset -f _setup_cluster_env_from_bash
-unset map 
+unset -f _setup_cluster_env_from_bash 

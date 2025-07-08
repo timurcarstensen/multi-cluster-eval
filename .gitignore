@@ -10,3 +10,4 @@
 **/*.err
 **/*.log
 **/*.out
+**/*.egg-info

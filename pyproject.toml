@@ -1,0 +1,24 @@
+[project]
+name = "oellm"
+version = "0.1.0"
+description = "OpenEuroLLM evaluation package"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "pandas",
+    "huggingface-hub",
+]
+
+[project.scripts]
+main = "oellm.main:main"
+
+[build-system]
+requires = ["uv_build>=0.7.19,<0.8.0"]
+build-backend = "uv_build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["oellm"]
+
+[tool.uv.build-backend]
+module-name = "oellm"
+module-root = ""

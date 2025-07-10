@@ -4,6 +4,7 @@ import logging
 import subprocess
 import os
 import tempfile
+from typing import Iterable
 
 import pandas as pd
 from jsonargparse import CLI
@@ -30,16 +31,18 @@ def _parse_user_queue_load() -> int:
     return 0
 
 
-def schedule_evals(
-    models: str,
-    tasks: str,
-    n_shot: int,
-    max_array_len: int,
-    debug: bool = False,
-) -> pd.DataFrame | None:
-    model_paths = []
-    # parse models into either local paths or huggingface models
-    for model in models.split(";"):
+def _process_model_paths(
+    models: Iterable[str], debug: bool = False
+) -> dict[str, list[Path | str]]:
+    """
+    Processes model strings into a dict of model paths.
+
+    Each model string can be a local path or a huggingface model identifier.
+    This function expands directory paths that contain multiple checkpoints.
+    """
+    processed_model_paths = {}
+    for model in models:
+        model_paths = []
         if Path(model).exists() and Path(model).is_dir():
             # could either be the direct path to a local model checkpoint dir or a directory that contains a lot of
             # intermediate checkpoints from training of the structure: `model_name/hf/iter_1`, `model_name/hf/iter_2` ...
@@ -51,10 +54,10 @@ def schedule_evals(
                 model_paths.append(Path(model))
 
             # check if dir contains subdirs that themselves contain a `.safetensors` file
-            model_path = (
+            model_path_base = (
                 Path(model) / "hf" if "hf" not in Path(model).name else Path(model)
             )
-            for subdir in model_path.glob("*"):
+            for subdir in model_path_base.glob("*"):
                 if subdir.is_dir() and any(subdir.glob("*.safetensors")):
                     model_paths.append(subdir)
 
@@ -64,7 +67,6 @@ def schedule_evals(
                 f"Downloading model {model} on the login node since the compute nodes may not have access to the internet"
             )
 
-            # TODO: remove later
             if not debug:
                 if "," in model:
                     model_kwargs = {
@@ -76,7 +78,7 @@ def schedule_evals(
                     model_kwargs["pretrained_model_name_or_path"] = model.split(",")[0]
                     try:
                         AutoModelForCausalLM.from_pretrained(**model_kwargs)
-                        model_paths.append(model_path)
+                        model_paths.append(model)
                     except Exception as e:
                         logging.debug(
                             f"Failed to download model {model} from huggingface. Continuing..."
@@ -84,17 +86,75 @@ def schedule_evals(
                         logging.debug(e)
                 else:
                     AutoModelForCausalLM.from_pretrained(model)
-                    model_paths.append(model_path)
+                    model_paths.append(model)
             else:
                 model_paths.append(model)
 
-    tasks = tasks.split(",")
+        if not model_paths:
+            logging.warning(
+                f"Could not find any valid model for '{model}'. It will be skipped."
+            )
+        processed_model_paths[model] = model_paths
+    return processed_model_paths
 
-    # cross product of model_paths and tasks into a dataframe
-    df = pd.DataFrame(
-        product(model_paths, tasks, n_shot if isinstance(n_shot, list) else [n_shot]),
-        columns=["model_path", "task_path", "n_shot"],
-    )
+
+def schedule_evals(
+    models: str | None = None,
+    tasks: str | None = None,
+    n_shot: int | list[int] | None = None,
+    eval_csv_path: str | None = None,
+    *,
+    max_array_len: int,
+    debug: bool = False,
+) -> pd.DataFrame | None:
+    if eval_csv_path:
+        if models or tasks or n_shot:
+            raise ValueError(
+                "Cannot specify `models`, `tasks`, or `n_shot` when `eval_csv_path` is provided."
+            )
+        df = pd.read_csv(eval_csv_path)
+        required_cols = {"model_path", "task_path", "n_shot"}
+        if not required_cols.issubset(df.columns):
+            raise ValueError(
+                f"CSV file must contain the columns: {', '.join(required_cols)}"
+            )
+
+        unique_models = df["model_path"].unique()
+        model_path_map = _process_model_paths(unique_models, debug)
+
+        # Create a new DataFrame with the expanded model paths
+        expanded_rows = []
+        for _, row in df.iterrows():
+            original_model_path = row["model_path"]
+            if original_model_path in model_path_map:
+                for expanded_path in model_path_map[original_model_path]:
+                    new_row = row.copy()
+                    new_row["model_path"] = expanded_path
+                    expanded_rows.append(new_row)
+        df = pd.DataFrame(expanded_rows)
+
+    elif models and tasks and n_shot is not None:
+        model_path_map = _process_model_paths(models.split(";"), debug)
+        model_paths = [p for paths in model_path_map.values() for p in paths]
+        tasks_list = tasks.split(",")
+
+        # cross product of model_paths and tasks into a dataframe
+        df = pd.DataFrame(
+            product(
+                model_paths,
+                tasks_list,
+                n_shot if isinstance(n_shot, list) else [n_shot],
+            ),
+            columns=["model_path", "task_path", "n_shot"],
+        )
+    else:
+        raise ValueError(
+            "Either `eval_csv_path` must be provided, or all of `models`, `tasks`, and `n_shot`."
+        )
+
+    if df.empty:
+        logging.warning("No evaluation jobs to schedule.")
+        return None
 
     if debug:
         remaining_queue_capacity = 10
@@ -127,8 +187,8 @@ def schedule_evals(
     sbatch_script = sbatch_template.format(
         csv_path=temp_csv_path,
         max_array_len=max_array_len,
-        array_limit=remaining_queue_capacity - 1,
-        num_jobs=remaining_queue_capacity,
+        array_limit=len(df) - 1,
+        num_jobs=len(df),
     )
 
     logging.debug("--- Generated sbatch script ---")

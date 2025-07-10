@@ -32,24 +32,30 @@ _setup_cluster_env_from_bash() {
     current_hostname=$(hostname)
 
     # get all top-level keys except shared
-    local clusters
-    clusters=$(jq -r 'keys[] | select(. != "shared")' "$config_file")
     
     local matching_cluster
-    for cluster_name in $clusters; do
-        local pattern
-        pattern=$(jq -r --arg cn "$cluster_name" '.[$cn].hostname_pattern' "$config_file")
-        
-        local regex
-        regex="${pattern//./\\.}"
-        regex="${regex//\*/.*}"
-        
-        if [[ "$current_hostname" =~ ^$regex$ ]]; then
-            matching_cluster=$cluster_name
-            break
+    
+    while read -r cluster_name; do
+        if [ -n "$cluster_name" ]; then
+            local pattern
+            pattern=$(jq -r --arg cn "$cluster_name" '.[$cn].hostname_pattern' "$config_file")
+            
+            local regex
+            regex="${pattern//./\.}"
+            regex="${regex//\*/.*}"
+            
+            # echo "Debug: Trying cluster '$cluster_name' with pattern '$pattern', regex '^$regex$', hostname '$current_hostname'"
+            
+            if [[ "$current_hostname" =~ ^$regex$ ]]; then
+                echo "Debug: Match found for '$cluster_name'"
+                matching_cluster=$cluster_name
+                break
+            fi
         fi
-    done
-
+    done < <(jq -r 'keys[] | select(. != "shared")' "$config_file")
+    
+    # echo "Debug: No matching cluster found after checking all."
+    
     if [ -z "$matching_cluster" ]; then
         echo "No matching cluster environment found for hostname '$current_hostname'" >&2
         return 1
@@ -70,15 +76,15 @@ _setup_cluster_env_from_bash() {
     done
 
     # Substitute variables
-    export PYTHON_PATH="${OUTPUT_DIR}/.venv"
-    export HF_HOME="${EVAL_BASE_DIR}/hf_data"
-    export OUTPUT_DIR="${EVAL_BASE_DIR}/${USER}"
-    export VENV_DIR="${OUTPUT_DIR}/.venv"
+    # export PYTHON_PATH="${OUTPUT_DIR}/.venv"
+    # export HF_HOME="${EVAL_BASE_DIR}/hf_data"
+    # export OUTPUT_DIR="${EVAL_BASE_DIR}/${USER}"
+    # export VENV_DIR="${OUTPUT_DIR}/.venv"
 
     # Install uv and create per-user venv if it doesn't exist
     if [ ! -d "$VENV_DIR" ]; then
         if [ "$verbose" = true ]; then
-            echo "Creating per-user virtual environment in ${VENV_DIR}"
+            echo "Creating per-user virtual environment in ${EVAL_VENV_DIR}"
         fi
 
         # Install uv if not found
@@ -91,27 +97,32 @@ _setup_cluster_env_from_bash() {
         fi
 
         # Create venv with uv
-        uv venv "$OUTPUT_DIR" --python 3.12 --managed-python
+        uv venv "${EVAL_VENV_DIR}" --python 3.12 --managed-python || exit 1
 
         # Activate and install dependencies
-        source "${VENV_DIR}/bin/activate"
+        source "${EVAL_VENV_DIR}/bin/activate" || exit 1
 
-        git clone --depth 1 https://github.com/EleutherAI/lm-evaluation-harness ${OUTPUT_DIR}/lm-evaluation-harness
-        cd ${OUTPUT_DIR}/lm-evaluation-harness
+        git clone --depth 1 https://github.com/EleutherAI/lm-evaluation-harness ${EVAL_OUTPUT_DIR}/lm-evaluation-harness || exit 1
+        
+        # cd ${OUTPUT_DIR}/lm-evaluation-harness
         
         uv pip install torch numpy
         
-        uv pip install -e . wandb transformers datasets==2.16.0 accelerate
+        uv pip install -e ${EVAL_OUTPUT_DIR}/lm-evaluation-harness 
+        
+        uv pip install wandb transformers datasets==2.16.0 accelerate
+
+        deactivate
 
     fi
 
     # activate the virtual environment
     if [ "$activate" = true ]; then
         if [ "$verbose" = true ]; then
-            echo "Activating Python virtual environment in ${VENV_DIR}"
+            echo "Activating Python virtual environment in ${EVAL_VENV_DIR}"
         fi
         # shellcheck disable=SC1090
-        source "${VENV_DIR}/bin/activate"
+        source "${EVAL_VENV_DIR}/bin/activate"
     fi
 
 }

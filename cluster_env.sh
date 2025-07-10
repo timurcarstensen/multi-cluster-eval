@@ -70,10 +70,34 @@ _setup_cluster_env_from_bash() {
     done
 
     # Substitute variables
-    export PYTHON_PATH="${EVAL_BASE_DIR}/.venv"
+    export PYTHON_PATH="${OUTPUT_DIR}/.venv"
     export HF_HOME="${EVAL_BASE_DIR}/hf_data"
     export OUTPUT_DIR="${EVAL_BASE_DIR}/${USER}"
-    export VENV_DIR="${EVAL_BASE_DIR}/.venv"
+    export VENV_DIR="${OUTPUT_DIR}/.venv"
+
+    # Install uv and create per-user venv if it doesn't exist
+    if [ ! -d "$VENV_DIR" ]; then
+        if [ "$verbose" = true ]; then
+            echo "Creating per-user virtual environment in ${VENV_DIR}"
+        fi
+
+        # Install uv if not found
+        if ! command -v uv &> /dev/null; then
+            if [ "$verbose" = true ]; then
+                echo "uv not found, installing via install script..."
+            fi
+            curl -LsSf https://astral.sh/uv/install.sh | sh
+            export PATH="$HOME/.cargo/bin:$PATH"
+        fi
+
+        # Create venv with uv
+        uv venv "$VENV_DIR" --python 3.12 --managed-python
+
+        # Activate and install dependencies
+        source "${VENV_DIR}/bin/activate"
+        uv pip install -e "$root_dir"
+        deactivate
+    fi
 
     # activate the virtual environment
     if [ "$activate" = true ]; then

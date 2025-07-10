@@ -91,12 +91,18 @@ _setup_cluster_env_from_bash() {
         fi
 
         # Create venv with uv
-        uv venv "$VENV_DIR" --python 3.12 --managed-python
+        uv venv "$OUTPUT_DIR" --python 3.12 --managed-python
 
         # Activate and install dependencies
         source "${VENV_DIR}/bin/activate"
-        uv pip install -e "$root_dir"
-        deactivate
+
+        git clone --depth 1 https://github.com/EleutherAI/lm-evaluation-harness ${OUTPUT_DIR}/lm-evaluation-harness
+        cd ${OUTPUT_DIR}/lm-evaluation-harness
+        
+        uv pip install torch numpy
+        
+        uv pip install -e . wandb transformers datasets==2.16.0 accelerate
+
     fi
 
     # activate the virtual environment

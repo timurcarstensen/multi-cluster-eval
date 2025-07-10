@@ -6,7 +6,7 @@
         "python_path": "{eval_base_dir}/.venv",
         "hf_home": "{eval_base_dir}/hf_data",
         "eval_output_dir": "{eval_base_dir}/{user}",
-        "venv_dir": "{eval_base_dir}/.venv"
+        "eval_venv_dir": "{eval_base_dir}/.venv"
     },
     "leonardo": {
         "hostname_pattern": "*.leonardo.local",

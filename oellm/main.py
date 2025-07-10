@@ -220,4 +220,4 @@ def schedule_evals(
 def main():
     logging.basicConfig(level=logging.DEBUG)
     """The main entrypoint for the CLI."""
-    CLI({"schedule": schedule_evals}, as_positional=False)
+    CLI({"schedule-eval": schedule_evals}, as_positional=False)

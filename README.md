@@ -38,8 +38,8 @@ git clone https://github.com/OpenEuroLLM/multi-cluster-eval.git ~/multi-cluster-
 You can then run:
 
 ```bash
-# Setup environment variables
-source multi-cluster-eval/cluster_env.sh
+# Setup environment variables and activate evaluation environment
+source multi-cluster-eval/cluster_env.sh --activate
 
 # Starts an interactive session with gpu on the default partition/account for the cluster
 srun -p $DEFAULT_PARTITION -t $EVAL_TIME_LIMIT --account $DEFAULT_ACCOUNT --gres="gpu:$NUM_GPU_PER_NODE" --pty /bin/bash

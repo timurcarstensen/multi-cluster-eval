@@ -21,7 +21,7 @@ _setup_cluster_env_from_bash() {
     script_path="${BASH_SOURCE:-$0}"
     local root_dir
     root_dir="$(dirname "$script_path")"
-    local config_file="$root_dir/clusters/clusters.json"
+    local config_file="$root_dir/clusters.json"
 
     if [ ! -f "$config_file" ]; then
         echo "Error: Configuration file '$config_file' not found." >&2

@@ -75,47 +75,6 @@ _setup_cluster_env_from_bash() {
         export "$(echo "$key" | tr '[:lower:]' '[:upper:]')"="$value"
     done
 
-    # Substitute variables
-    # export PYTHON_PATH="${OUTPUT_DIR}/.venv"
-    # export HF_HOME="${EVAL_BASE_DIR}/hf_data"
-    # export OUTPUT_DIR="${EVAL_BASE_DIR}/${USER}"
-    # export VENV_DIR="${OUTPUT_DIR}/.venv"
-
-    # Install uv and create per-user venv if it doesn't exist
-    if [ ! -d "$VENV_DIR" ]; then
-        if [ "$verbose" = true ]; then
-            echo "Creating per-user virtual environment in ${EVAL_VENV_DIR}"
-        fi
-
-        # Install uv if not found
-        if ! command -v uv &> /dev/null; then
-            if [ "$verbose" = true ]; then
-                echo "uv not found, installing via install script..."
-            fi
-            curl -LsSf https://astral.sh/uv/install.sh | sh
-            export PATH="$HOME/.cargo/bin:$PATH"
-        fi
-
-        # Create venv with uv
-        uv venv "${EVAL_VENV_DIR}" --python 3.12 --managed-python || exit 1
-
-        # Activate and install dependencies
-        source "${EVAL_VENV_DIR}/bin/activate" || exit 1
-
-        git clone --depth 1 https://github.com/EleutherAI/lm-evaluation-harness ${EVAL_OUTPUT_DIR}/lm-evaluation-harness || exit 1
-        
-        # cd ${OUTPUT_DIR}/lm-evaluation-harness
-        
-        uv pip install torch numpy
-        
-        uv pip install -e ${EVAL_OUTPUT_DIR}/lm-evaluation-harness 
-        
-        uv pip install wandb transformers datasets==2.16.0 accelerate
-
-        deactivate
-
-    fi
-
     # activate the virtual environment
     if [ "$activate" = true ]; then
         if [ "$verbose" = true ]; then

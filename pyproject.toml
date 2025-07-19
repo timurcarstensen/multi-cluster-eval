@@ -9,6 +9,7 @@ dependencies = [
     "transformers",
     "jsonargparse",
     "torch",
+    "rich",
 ]
 
 [project.scripts]

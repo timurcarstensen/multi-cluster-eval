@@ -1,13 +1,15 @@
+import logging
+import os
+import subprocess
+from datetime import datetime
 from itertools import product
 from pathlib import Path
-import logging
-import subprocess
-import os
-import tempfile
-from typing import Iterable, List, Optional
+from typing import Iterable
 
 import pandas as pd
 from jsonargparse import auto_cli
+from rich.console import Console
+from rich.logging import RichHandler
 from transformers import AutoModelForCausalLM
 
 
@@ -74,7 +76,7 @@ def _process_model_paths(
                     }
                     model_kwargs["pretrained_model_name_or_path"] = model.split(",")[0]
                     try:
-                        AutoModelForCausalLM.from_pretrained(**model_kwargs)
+                        AutoModelForCausalLM.from_pretrained(**model_kwargs) # type: ignore[call-arg]
                         model_paths.append(model)
                     except Exception as e:
                         logging.debug(
@@ -188,24 +190,33 @@ def schedule_evals(
     )
 
     # Save df to temporary CSV file
-    with tempfile.NamedTemporaryFile(
-        mode="w", suffix=".csv", delete=False, delete_on_close=False
-    ) as temp_file:
-        df.to_csv(temp_file.name, index=False)
-        temp_csv_path = temp_file.name
+    # Save the csv file in ~/.oellm/evals/yyyy-mm-dd-hh-mm-ss/jobs.csv
+    evals_dir = Path.home() / ".oellm" / "evals"
+    evals_dir.mkdir(parents=True, exist_ok=True)
+    evals_dir = evals_dir / f"{datetime.now().strftime('%Y-%m-%d-%H-%M-%S')}"
+    evals_dir.mkdir(parents=True, exist_ok=True)
+    csv_path = evals_dir / "jobs.csv"
+    
+    df.to_csv(csv_path, index=False)
 
-    logging.debug(f"Saved evaluation dataframe to temporary CSV: {temp_csv_path}")
+    logging.debug(f"Saved evaluation dataframe to temporary CSV: {csv_path}")
 
     with open(Path(__file__).parent / "template.sbatch", "r") as f:
         sbatch_template = f.read()
 
     # replace the placeholders in the template with the actual values
     sbatch_script = sbatch_template.format(
-        csv_path=temp_csv_path,
+        csv_path=csv_path,
         max_array_len=max_array_len,
         array_limit=len(df) - 1,
         num_jobs=len(df),
+        log_dir=evals_dir / "slurm_logs",
     )
+
+    # Save the sbatch script to the evals directory
+    sbatch_script_path = evals_dir / "submit_evals.sbatch"
+    with open(sbatch_script_path, "w") as f:
+        f.write(sbatch_script)
 
     logging.debug("--- Generated sbatch script ---")
     logging.debug(sbatch_script)
@@ -233,6 +244,27 @@ def schedule_evals(
 
 
 def main():
-    logging.basicConfig(level=logging.DEBUG)
+    rich_handler = RichHandler(
+        console=Console(),
+        show_time=True,
+        log_time_format="%H:%M:%S",
+        show_path=False,
+        markup=True,
+        rich_tracebacks=True,
+    )
+    
+    class RichFormatter(logging.Formatter):
+        def format(self, record):
+            # Define colors for different log levels
+            record.msg = f"{record.getMessage()}"
+            return record.msg
+    
+    rich_handler.setFormatter(RichFormatter())
+    
+    root_logger = logging.getLogger()
+    root_logger.handlers = []  # Remove any default handlers
+    root_logger.addHandler(rich_handler)
+    root_logger.setLevel(logging.DEBUG)
+    
     """The main entrypoint for the CLI."""
     auto_cli({"schedule-eval": schedule_evals}, as_positional=False)

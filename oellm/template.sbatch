@@ -2,10 +2,10 @@
 #SBATCH --job-name=oellm-eval
 #SBATCH --time=00:30:00
 #SBATCH --gres=gpu:$NUM_GPU_PER_NODE
-#SBATCH --output=logs/%x-%A-%a.out # TODO 
+#SBATCH --output={log_dir}/%x-%A-%a.out # TODO 
 #SBATCH --partition=$DEFAULT_PARTITION
 #SBATCH --account=$EVAL_ACCOUNT
-#SBATCH --error=logs/%x-%A-%a.err # TODO
+#SBATCH --error={log_dir}/%x-%A-%a.err # TODO
 #SBATCH --array=0-{array_limit}%{max_array_len}
 
 

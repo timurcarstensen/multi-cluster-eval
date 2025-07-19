@@ -21,22 +21,6 @@ oellm = "oellm.main:main"
 requires = ["uv_build>=0.7.19,<0.8.0"]
 build-backend = "uv_build"
 
-[tool.hatch.build.targets.wheel]
-packages = ["oellm"]
-
 [tool.uv.build-backend]
 module-name = "oellm"
 module-root = ""
-
-[tool.poetry.dependencies]
-python = "^3.11"
-jsonargparse = {extras = ["all"], version = "^4.27.2"}
-pandas = "^2.2.2"
-transformers = "^4.40.1"
-torch = "^2.3.0"
-pillow = "^10.3.0"
-accelerate = "^0.29.3"
-safetensors = "^0.4.3"
-rich = "^13.7.1"
-
-[tool.poetry.group.dev.dependencies]

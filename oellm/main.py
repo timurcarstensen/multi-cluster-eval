@@ -66,8 +66,12 @@ def _load_cluster_env() -> None:
 
 
 def _parse_user_queue_load() -> int:
-    command = "squeue -u $USER -h -t pending,running -r | wc -l"
-    result = subprocess.run(command, shell=True, capture_output=True, text=True)
+    result = subprocess.run(
+        "squeue -u $USER -h -t pending,running -r | wc -l",
+        shell=True,
+        capture_output=True,
+        text=True,
+    )
 
     if result.stdout:
         try:
@@ -113,7 +117,9 @@ def _process_model_paths(
                     model_paths.append(subdir)
 
         else:
-            logging.info(f"Model {model} not found locally, assuming it is a 🤗 hub model")
+            logging.info(
+                f"Model {model} not found locally, assuming it is a 🤗 hub model"
+            )
             logging.debug(
                 f"Downloading model {model} on the login node since the compute nodes may not have access to the internet"
             )
@@ -172,7 +178,9 @@ def _pre_download_task_datasets(tasks: Iterable[str], debug: bool = False) -> No
         processed.add(task_name)
 
         try:
-            logging.info(f"Preparing dataset for task '{task_name}' (download if not cached)…")
+            logging.info(
+                f"Preparing dataset for task '{task_name}' (download if not cached)…"
+            )
 
             # Instantiating the task downloads the dataset (or reuses cache)
             task_objects = tm.load_task_or_group(task_name)
@@ -186,14 +194,16 @@ def _pre_download_task_datasets(tasks: Iterable[str], debug: bool = False) -> No
                     continue
                 if hasattr(current, "download") and callable(current.download):
                     try:
-                        current.download(download_mode=DownloadMode.REUSE_DATASET_IF_EXISTS)  # type: ignore[arg-type]
+                        current.download(
+                            download_mode=DownloadMode.REUSE_DATASET_IF_EXISTS
+                        )  # type: ignore[arg-type]
                     except TypeError as e:
-                        logging.error(f"Failed to download dataset for task '{task_name}' with download_mode=REUSE_DATASET_IF_EXISTS: {e}")
+                        logging.error(
+                            f"Failed to download dataset for task '{task_name}' with download_mode=REUSE_DATASET_IF_EXISTS: {e}"
+                        )
                         current.download()  # type: ignore[misc]
 
-            logging.debug(
-                f"Finished dataset preparation for task '{task_name}'."
-            )
+            logging.debug(f"Finished dataset preparation for task '{task_name}'.")
         except Exception as e:
             logging.warning(
                 "Failed to pre-download dataset for task '%s'. The evaluation job might fail on the compute node.\n%s",
@@ -304,7 +314,10 @@ def schedule_evals(
         f"evals to schedule: {len(df)}."
     )
 
-    evals_dir = Path(os.environ["EVAL_OUTPUT_DIR"]) / f"{datetime.now().strftime('%Y-%m-%d-%H-%M-%S')}"
+    evals_dir = (
+        Path(os.environ["EVAL_OUTPUT_DIR"])
+        / f"{datetime.now().strftime('%Y-%m-%d-%H-%M-%S')}"
+    )
     evals_dir.mkdir(parents=True, exist_ok=True)
 
     slurm_logs_dir = evals_dir / "slurm_logs"

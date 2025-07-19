@@ -1,18 +1,18 @@
 #!/bin/bash
 #SBATCH --job-name=oellm-eval
-#SBATCH --time=00:30:00
-#SBATCH --gres=gpu:$NUM_GPU_PER_NODE
-#SBATCH --output={log_dir}/%x-%A-%a.out # TODO 
-#SBATCH --partition=$DEFAULT_PARTITION
-#SBATCH --account=$EVAL_ACCOUNT
-#SBATCH --error={log_dir}/%x-%A-%a.err # TODO
+#SBATCH --time=$TIME_LIMIT
+#SBATCH --gres=gpu:$GPUS_PER_NODE
+#SBATCH --output={log_dir}/%x-%A-%a.out
+#SBATCH --partition=$PARTITION
+#SBATCH --account=$ACCOUNT
+#SBATCH --error={log_dir}/%x-%A-%a.err
 #SBATCH --array=0-{array_limit}%{max_array_len}
 
 
 CSV_PATH="{csv_path}"
 NUM_JOBS={num_jobs}
 
-echo "Running eval on $CSV_PATH with $NUM_JOBS concurrent jobs on $DEFAULT_PARTITION with $GPUS_PER_NODE GPUs per node"
+echo "Running eval on $CSV_PATH with $NUM_JOBS concurrent jobs on $SBATCH_PARTITION with $SBATCH_GPUS_PER_NODE GPUs per node"
 echo "SLURM_JOB_ID: $SLURM_JOB_ID"
 echo "SLURM_ARRAY_JOB_ID: $SLURM_ARRAY_JOB_ID"
 

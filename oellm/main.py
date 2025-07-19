@@ -1,9 +1,13 @@
+import json
 import logging
 import os
+import re
+import socket
 import subprocess
 from datetime import datetime
 from itertools import product
 from pathlib import Path
+from string import Template
 from typing import Iterable
 
 import pandas as pd
@@ -11,6 +15,54 @@ from jsonargparse import auto_cli
 from rich.console import Console
 from rich.logging import RichHandler
 from transformers import AutoModelForCausalLM
+
+
+def _load_cluster_env() -> None:
+    """
+    Loads the correct cluster environment variables from `clusters.json` based on the hostname.
+    """
+    with open(Path(__file__).parent.parent / "clusters.json", "r") as f:
+        clusters = json.load(f)
+    hostname = socket.gethostname()
+
+    # First load shared environment variables
+    shared_cfg = clusters.get("shared", {})
+
+    # match hostname to the regex in the clusters.json
+    for host in set(clusters.keys()) - {"shared"}:
+        pattern = clusters[host]["hostname_pattern"]
+        # Convert shell-style wildcards to regex
+        regex_pattern = pattern.replace(".", r"\.").replace("*", ".*")
+        if re.match(f"^{regex_pattern}$", hostname):
+            cluster_cfg = clusters[host]
+            break
+    else:
+        raise ValueError(f"No cluster found for hostname: {hostname}")
+
+    # Combine shared and cluster-specific configs, with cluster-specific taking precedence
+    # Remove hostname_pattern from the final config
+    if "hostname_pattern" in cluster_cfg:
+        del cluster_cfg["hostname_pattern"]
+
+    # Set environment variables, expanding any template variables
+    for k, v in cluster_cfg.items():
+        # Expand template variables using existing environment variables
+        os.environ[k] = str(v)
+
+    for k, v in shared_cfg.items():
+        try:
+            os.environ[k] = str(v).format(**cluster_cfg)
+        except KeyError as e:
+            # when substituting env vars that are not in cluster_cfg but in the environment (e.g., $USER, $SHELL, etc...)
+            if len(e.args) > 1:
+                raise ValueError(
+                    f"Env. variable substitution for {k} failed. Missing keys: {', '.join(e.args)}"
+                )
+
+            missing_key: str = e.args[0]
+            os.environ[k] = str(v).format(
+                **cluster_cfg, **{missing_key: os.environ[missing_key]}
+            )
 
 
 def _parse_user_queue_load() -> int:
@@ -76,7 +128,7 @@ def _process_model_paths(
                     }
                     model_kwargs["pretrained_model_name_or_path"] = model.split(",")[0]
                     try:
-                        AutoModelForCausalLM.from_pretrained(**model_kwargs) # type: ignore[call-arg]
+                        AutoModelForCausalLM.from_pretrained(**model_kwargs)  # type: ignore[call-arg]
                         model_paths.append(model)
                     except Exception as e:
                         logging.debug(
@@ -111,20 +163,21 @@ def schedule_evals(
 
     Args:
         models: A string of comma-separated model paths or Hugging Face model identifiers.
-            Warning: does not allow passing model args such as `EleutherAI/pythia-160m,revision=step100000` 
-            since we split on commas. If you need to pass model args, use the `eval_csv_path` option. 
+            Warning: does not allow passing model args such as `EleutherAI/pythia-160m,revision=step100000`
+            since we split on commas. If you need to pass model args, use the `eval_csv_path` option.
             For local paths, the path must either be a directory that contains a `.safetensors` file or a directory that contains a lot of
-            intermediate checkpoints from training of the structure: `model_name/hf/iter_XXXXX`. The function will expand the path to 
+            intermediate checkpoints from training of the structure: `model_name/hf/iter_XXXXX`. The function will expand the path to
             include all the intermediate checkpoints and schedule jobs for each checkpoint.
         tasks: A string of comma-separated task paths.
         n_shot: An integer or list of integers specifying the number of shots for each task.
         eval_csv_path: A path to a CSV file containing evaluation data.
             Warning: exclusive argument. Cannot specify `models`, `tasks`, or `n_shot` when `eval_csv_path` is provided.
-        max_array_len: The maximum number of jobs to schedule to run concurrently. 
+        max_array_len: The maximum number of jobs to schedule to run concurrently.
             Warning: this is not the number of jobs in the array job. This is determined by the environment variable `QUEUE_LIMIT`.
     """
-    
-    
+    # load the cluster environment variables
+    _load_cluster_env()
+
     if eval_csv_path:
         if models or tasks or n_shot:
             raise ValueError(
@@ -188,15 +241,16 @@ def schedule_evals(
         f"Remaining capacity in the queue: {remaining_queue_capacity}. Number of "
         f"evals to schedule: {len(df)}."
     )
-
+    
     # Save df to temporary CSV file
     # Save the csv file in ~/.oellm/evals/yyyy-mm-dd-hh-mm-ss/jobs.csv
-    evals_dir = Path.home() / ".oellm" / "evals"
+    evals_dir = Path(os.environ["EVAL_OUTPUT_DIR"]) / f"{datetime.now().strftime('%Y-%m-%d-%H-%M-%S')}"
     evals_dir.mkdir(parents=True, exist_ok=True)
-    evals_dir = evals_dir / f"{datetime.now().strftime('%Y-%m-%d-%H-%M-%S')}"
-    evals_dir.mkdir(parents=True, exist_ok=True)
-    csv_path = evals_dir / "jobs.csv"
     
+    slurm_logs_dir = evals_dir / "slurm_logs"
+    slurm_logs_dir.mkdir(parents=True, exist_ok=True)
+    csv_path = evals_dir / "jobs.csv"
+
     df.to_csv(csv_path, index=False)
 
     logging.debug(f"Saved evaluation dataframe to temporary CSV: {csv_path}")
@@ -205,6 +259,7 @@ def schedule_evals(
         sbatch_template = f.read()
 
     # replace the placeholders in the template with the actual values
+    # First, replace python-style placeholders
     sbatch_script = sbatch_template.format(
         csv_path=csv_path,
         max_array_len=max_array_len,
@@ -213,34 +268,36 @@ def schedule_evals(
         log_dir=evals_dir / "slurm_logs",
     )
 
+    # substitute any $ENV_VAR occurrences (e.g., $TIME_LIMIT) since env vars are not 
+    # expanded in the #SBATCH directives
+    sbatch_script = Template(sbatch_script).safe_substitute(os.environ)
+
     # Save the sbatch script to the evals directory
     sbatch_script_path = evals_dir / "submit_evals.sbatch"
     with open(sbatch_script_path, "w") as f:
         f.write(sbatch_script)
 
-    logging.debug("--- Generated sbatch script ---")
-    logging.debug(sbatch_script)
-    logging.debug("-------------------------------")
+    logging.debug(f"Saved sbatch script to {sbatch_script_path}")
 
     # Submit the job script to slurm by piping the script content to sbatch
-    try:
-        result = subprocess.run(
-            ["sbatch"],
-            input=sbatch_script,
-            text=True,
-            check=True,
-            capture_output=True,
-        )
-        logging.info("Job submitted successfully.")
-        logging.info(result.stdout)
-    except subprocess.CalledProcessError as e:
-        logging.error(f"Failed to submit job: {e}")
-        logging.error(f"sbatch stderr: {e.stderr}")
-    except FileNotFoundError:
-        logging.error(
-            "sbatch command not found. Please make sure you are on a system with SLURM installed."
-        )
-
+    if not debug:
+        try:
+            result = subprocess.run(
+                ["sbatch"],
+                input=sbatch_script,
+                text=True,
+                check=True,
+                capture_output=True,
+            )
+            logging.info("Job submitted successfully.")
+            logging.info(result.stdout)
+        except subprocess.CalledProcessError as e:
+            logging.error(f"Failed to submit job: {e}")
+            logging.error(f"sbatch stderr: {e.stderr}")
+        except FileNotFoundError:
+            logging.error(
+                "sbatch command not found. Please make sure you are on a system with SLURM installed."
+            )
 
 
 def main():
@@ -252,19 +309,19 @@ def main():
         markup=True,
         rich_tracebacks=True,
     )
-    
+
     class RichFormatter(logging.Formatter):
         def format(self, record):
             # Define colors for different log levels
             record.msg = f"{record.getMessage()}"
             return record.msg
-    
+
     rich_handler.setFormatter(RichFormatter())
-    
+
     root_logger = logging.getLogger()
     root_logger.handlers = []  # Remove any default handlers
     root_logger.addHandler(rich_handler)
     root_logger.setLevel(logging.DEBUG)
-    
+
     """The main entrypoint for the CLI."""
     auto_cli({"schedule-eval": schedule_evals}, as_positional=False)

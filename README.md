@@ -15,3 +15,13 @@
 This will use the shared huggingface datasets directory at `$HF_HOME` and store the eval results in the shared output directory in `$EVAL_OUTPUT_DIR`
 
 > Note: You may need to set your HF_TOKEN in case you get a rate limit when pulling new datasets.
+
+
+## Setting up a shared python environment
+> make sure you have `uv` installed and are in a directory that you can share with other users in your project
+
+1. Install python into `.python`: `uv python install -i .python 3.12`
+2. Create a virtual environment: `uv venv -p .python/path/to/pythonbinary --relocatable`
+3. Activate the environment: `source .venv/bin/activate`
+4. Clone lm-eval: `git clone --depth 1 https://github.com/EleutherAI/lm-evaluation-harness`
+5. Install the dependencies: `cd lm-evaluation-harness && pip install -e . datasets<4.0.0 torch transformers accelerate sentencepiece wandb`

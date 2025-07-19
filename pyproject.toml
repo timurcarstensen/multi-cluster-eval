@@ -8,8 +8,10 @@ dependencies = [
     "pandas",
     "transformers",
     "jsonargparse",
+    "datasets<4.0.0",
     "torch",
     "rich",
+    "lm-eval",
 ]
 
 [project.scripts]

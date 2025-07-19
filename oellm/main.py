@@ -113,7 +113,7 @@ def _process_model_paths(
                     model_paths.append(subdir)
 
         else:
-            logging.info(f"Model {model} not found, assuming it is a huggingface model")
+            logging.info(f"Model {model} not found locally, assuming it is a 🤗 hub model")
             logging.debug(
                 f"Downloading model {model} on the login node since the compute nodes may not have access to the internet"
             )
@@ -149,6 +149,59 @@ def _process_model_paths(
     return processed_model_paths
 
 
+def _pre_download_task_datasets(tasks: Iterable[str], debug: bool = False) -> None:
+    """Ensure that all datasets required by the given `tasks` are present in the local 🤗 cache at $HF_HOME."""
+
+    try:
+        from lm_eval.tasks import TaskManager  # type: ignore
+        from datasets import DownloadMode  # type: ignore
+    except Exception as import_err:
+        logging.warning(
+            "Could not import TaskManager from lm_eval.tasks – skipping dataset pre-download.\n%s",
+            import_err,
+        )
+        return
+
+    processed: set[str] = set()
+
+    tm = TaskManager()
+
+    for task_name in tasks:
+        if not isinstance(task_name, str) or task_name in processed:
+            continue
+        processed.add(task_name)
+
+        try:
+            logging.info(f"Preparing dataset for task '{task_name}' (download if not cached)…")
+
+            # Instantiating the task downloads the dataset (or reuses cache)
+            task_objects = tm.load_task_or_group(task_name)
+
+            # Some entries might be nested dictionaries (e.g., groups)
+            stack = [task_objects]
+            while stack:
+                current = stack.pop()
+                if isinstance(current, dict):
+                    stack.extend(current.values())
+                    continue
+                if hasattr(current, "download") and callable(current.download):
+                    try:
+                        current.download(download_mode=DownloadMode.REUSE_DATASET_IF_EXISTS)  # type: ignore[arg-type]
+                    except TypeError as e:
+                        logging.error(f"Failed to download dataset for task '{task_name}' with download_mode=REUSE_DATASET_IF_EXISTS: {e}")
+                        current.download()  # type: ignore[misc]
+
+            logging.debug(
+                f"Finished dataset preparation for task '{task_name}'."
+            )
+        except Exception as e:
+            logging.warning(
+                "Failed to pre-download dataset for task '%s'. The evaluation job might fail on the compute node.\n%s",
+                task_name,
+                e,
+            )
+
+
 def schedule_evals(
     models: str | None = None,
     tasks: str | None = None,
@@ -157,6 +210,7 @@ def schedule_evals(
     *,
     max_array_len: int = 32,
     debug: bool = False,
+    download_only: bool = False,
 ) -> None:
     """
     Schedule evaluation jobs for a given set of models, tasks, and number of shots.
@@ -174,6 +228,7 @@ def schedule_evals(
             Warning: exclusive argument. Cannot specify `models`, `tasks`, or `n_shot` when `eval_csv_path` is provided.
         max_array_len: The maximum number of jobs to schedule to run concurrently.
             Warning: this is not the number of jobs in the array job. This is determined by the environment variable `QUEUE_LIMIT`.
+        download_only: If True, only download the datasets and models and exit.
     """
     # load the cluster environment variables
     _load_cluster_env()
@@ -227,6 +282,13 @@ def schedule_evals(
         logging.warning("No evaluation jobs to schedule.")
         return None
 
+    # Ensure that all datasets required by the tasks are cached locally to avoid
+    # network access on compute nodes.
+    _pre_download_task_datasets(df["task_path"].unique(), debug)
+
+    if download_only:
+        return None
+
     if debug:
         remaining_queue_capacity = 10
     else:
@@ -241,12 +303,10 @@ def schedule_evals(
         f"Remaining capacity in the queue: {remaining_queue_capacity}. Number of "
         f"evals to schedule: {len(df)}."
     )
-    
-    # Save df to temporary CSV file
-    # Save the csv file in ~/.oellm/evals/yyyy-mm-dd-hh-mm-ss/jobs.csv
+
     evals_dir = Path(os.environ["EVAL_OUTPUT_DIR"]) / f"{datetime.now().strftime('%Y-%m-%d-%H-%M-%S')}"
     evals_dir.mkdir(parents=True, exist_ok=True)
-    
+
     slurm_logs_dir = evals_dir / "slurm_logs"
     slurm_logs_dir.mkdir(parents=True, exist_ok=True)
     csv_path = evals_dir / "jobs.csv"
@@ -268,7 +328,7 @@ def schedule_evals(
         log_dir=evals_dir / "slurm_logs",
     )
 
-    # substitute any $ENV_VAR occurrences (e.g., $TIME_LIMIT) since env vars are not 
+    # substitute any $ENV_VAR occurrences (e.g., $TIME_LIMIT) since env vars are not
     # expanded in the #SBATCH directives
     sbatch_script = Template(sbatch_script).safe_substitute(os.environ)
 
@@ -321,7 +381,7 @@ def main():
     root_logger = logging.getLogger()
     root_logger.handlers = []  # Remove any default handlers
     root_logger.addHandler(rich_handler)
-    root_logger.setLevel(logging.DEBUG)
+    root_logger.setLevel(logging.INFO)
 
     """The main entrypoint for the CLI."""
     auto_cli({"schedule-eval": schedule_evals}, as_positional=False)

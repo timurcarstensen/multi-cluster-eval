@@ -12,6 +12,10 @@
 CSV_PATH="{csv_path}"
 NUM_JOBS={num_jobs}
 
+# avoiding crashes due to compute nodes not having access to the internet
+export HF_HOME=$HF_HOME
+export HF_HUB_OFFLINE=1
+
 echo "Running eval on $CSV_PATH with $NUM_JOBS concurrent jobs on $SBATCH_PARTITION with $SBATCH_GPUS_PER_NODE GPUs per node"
 echo "SLURM_JOB_ID: $SLURM_JOB_ID"
 echo "SLURM_ARRAY_JOB_ID: $SLURM_ARRAY_JOB_ID"

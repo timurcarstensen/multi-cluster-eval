@@ -361,6 +361,7 @@ def schedule_evals(
                 text=True,
                 check=True,
                 capture_output=True,
+                env=os.environ,
             )
             logging.info("Job submitted successfully.")
             logging.info(result.stdout)
@@ -396,5 +397,4 @@ def main():
     root_logger.addHandler(rich_handler)
     root_logger.setLevel(logging.INFO)
 
-    """The main entrypoint for the CLI."""
     auto_cli({"schedule-eval": schedule_evals}, as_positional=False)

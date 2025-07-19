@@ -4,10 +4,10 @@ import logging
 import subprocess
 import os
 import tempfile
-from typing import Iterable
+from typing import Iterable, List, Optional
 
 import pandas as pd
-from jsonargparse import CLI
+from jsonargparse import auto_cli
 from transformers import AutoModelForCausalLM
 
 
@@ -15,9 +15,6 @@ def _parse_user_queue_load() -> int:
     command = "squeue -u $USER -h -t pending,running -r | wc -l"
     result = subprocess.run(command, shell=True, capture_output=True, text=True)
 
-    import pdb
-
-    pdb.set_trace()
     if result.stdout:
         try:
             return int(result.stdout.strip())
@@ -104,9 +101,28 @@ def schedule_evals(
     n_shot: int | list[int] | None = None,
     eval_csv_path: str | None = None,
     *,
-    max_array_len: int,
+    max_array_len: int = 32,
     debug: bool = False,
-) -> pd.DataFrame | None:
+) -> None:
+    """
+    Schedule evaluation jobs for a given set of models, tasks, and number of shots.
+
+    Args:
+        models: A string of comma-separated model paths or Hugging Face model identifiers.
+            Warning: does not allow passing model args such as `EleutherAI/pythia-160m,revision=step100000` 
+            since we split on commas. If you need to pass model args, use the `eval_csv_path` option. 
+            For local paths, the path must either be a directory that contains a `.safetensors` file or a directory that contains a lot of
+            intermediate checkpoints from training of the structure: `model_name/hf/iter_XXXXX`. The function will expand the path to 
+            include all the intermediate checkpoints and schedule jobs for each checkpoint.
+        tasks: A string of comma-separated task paths.
+        n_shot: An integer or list of integers specifying the number of shots for each task.
+        eval_csv_path: A path to a CSV file containing evaluation data.
+            Warning: exclusive argument. Cannot specify `models`, `tasks`, or `n_shot` when `eval_csv_path` is provided.
+        max_array_len: The maximum number of jobs to schedule to run concurrently. 
+            Warning: this is not the number of jobs in the array job. This is determined by the environment variable `QUEUE_LIMIT`.
+    """
+    
+    
     if eval_csv_path:
         if models or tasks or n_shot:
             raise ValueError(
@@ -134,7 +150,7 @@ def schedule_evals(
         df = pd.DataFrame(expanded_rows)
 
     elif models and tasks and n_shot is not None:
-        model_path_map = _process_model_paths(models.split(";"), debug)
+        model_path_map = _process_model_paths(models.split(","), debug)
         model_paths = [p for paths in model_path_map.values() for p in paths]
         tasks_list = tasks.split(",")
 
@@ -214,10 +230,9 @@ def schedule_evals(
             "sbatch command not found. Please make sure you are on a system with SLURM installed."
         )
 
-    return df
 
 
 def main():
     logging.basicConfig(level=logging.DEBUG)
     """The main entrypoint for the CLI."""
-    CLI({"schedule-eval": schedule_evals}, as_positional=False)
+    auto_cli({"schedule-eval": schedule_evals}, as_positional=False)

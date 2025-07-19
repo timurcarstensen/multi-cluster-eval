@@ -12,11 +12,9 @@
 CSV_PATH="{csv_path}"
 NUM_JOBS={num_jobs}
 
+echo "Running eval on $CSV_PATH with $NUM_JOBS concurrent jobs on $DEFAULT_PARTITION with $GPUS_PER_NODE GPUs per node"
 echo "SLURM_JOB_ID: $SLURM_JOB_ID"
 echo "SLURM_ARRAY_JOB_ID: $SLURM_ARRAY_JOB_ID"
-echo "SLURM_ARRAY_TASK_ID: $SLURM_ARRAY_TASK_ID"
-echo "CSV Path: $CSV_PATH"
-echo "Number of concurrent jobs: $NUM_JOBS"
 
 TOTAL_EVALS=$(($(wc -l < "$CSV_PATH") - 1))
 echo "Total evaluations to run: $TOTAL_EVALS"

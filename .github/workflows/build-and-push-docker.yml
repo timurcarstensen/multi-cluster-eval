@@ -5,6 +5,7 @@ on:
   push:
     paths:
       - 'Dockerfile'
+      - 'docker/*.Dockerfile'
       - '.github/workflows/build-and-push-docker.yml'
   # Allow manual trigger from the GitHub UI with optional custom tag
   workflow_dispatch:
@@ -17,6 +18,18 @@ on:
 jobs:
   build-push:
     name: Build & Push to GHCR
+    # Build each Dockerfile under ./docker via a build matrix
+    strategy:
+      matrix:
+        include:
+          - dockerfile: Dockerfile
+            suffix: ''
+          - dockerfile: docker/jureca.Dockerfile
+            suffix: -jureca
+          - dockerfile: docker/leonardo.Dockerfile
+            suffix: -leonardo
+          - dockerfile: docker/lumi.Dockerfile
+            suffix: -lumi
     runs-on: ubuntu-latest
     permissions:
       packages: write   # needed to push to ghcr.io
@@ -69,7 +82,8 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ghcr.io/${{ github.repository_owner }}/eval_env
+          # Produce image name specific to the current matrix item
+          images: ghcr.io/${{ github.repository_owner }}/eval_env${{ matrix.suffix }}
           # Tags produced by default:
           #  • latest (main branch) or branch name
           #  • sha-<short SHA>
@@ -83,7 +97,7 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           context: .
-          file: Dockerfile
+          file: ${{ matrix.dockerfile }}
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }} 

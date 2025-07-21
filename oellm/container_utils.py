@@ -10,7 +10,7 @@ def _inspect_sif_digest(sif_path: Path) -> Optional[str]:
     """Return the originating container digest stored in the SIF, if available."""
     try:
         result = subprocess.run(
-            ["apptainer", "inspect", "--json", str(sif_path)],
+            ["singularity", "inspect", "--json", str(sif_path)],
             capture_output=True,
             text=True,
             check=True,
@@ -74,8 +74,9 @@ def ensure_singularity_image(
         tmp_path = Path(tmp.name)
 
     build_cmd = [
-        "apptainer",
+        "singularity",
         "build",
+        "--yes",  # skip interactive overwrite prompts
         str(tmp_path),
         f"docker://{docker_image}",
     ]

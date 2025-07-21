@@ -4,7 +4,6 @@ on:
   # Rebuild automatically when the Dockerfile (or this workflow) changes
   push:
     paths:
-      - 'Dockerfile'
       - 'docker/*.Dockerfile'
       - '.github/workflows/build-and-push-docker.yml'
   # Allow manual trigger from the GitHub UI with optional custom tag
@@ -22,8 +21,6 @@ jobs:
     strategy:
       matrix:
         include:
-          - dockerfile: Dockerfile
-            suffix: ''
           - dockerfile: docker/jureca.Dockerfile
             suffix: -jureca
           - dockerfile: docker/leonardo.Dockerfile
@@ -60,6 +57,20 @@ jobs:
           sudo rm -rf /opt/ghc || true
           sudo rm -rf /opt/hostedtoolcache || true
           sudo docker system prune -af || true
+
+      # Extra aggressive cleanup on the GitHub runner when building the ROCm-based
+      # Lumi image, which otherwise risks exceeding the disk quota due to
+      # large base layers.
+      - name: Extra cleanup for Lumi
+        if: ${{ matrix.suffix == '-lumi' }}
+        run: |
+          sudo apt-get remove -y '^ghc-8.*' || true
+          sudo apt-get remove -y '^llvm-.*' || true
+          sudo apt-get remove -y 'php.*' || true
+          sudo apt-get remove -y azure-cli google-cloud-sdk hhvm google-chrome-stable firefox powershell mono-devel || true
+          sudo apt-get remove -y '^dotnet-.*' || true
+          sudo apt-get autoremove -y || true
+          sudo apt-get clean || true
 
       - name: Show disk usage after cleanup
         run: df -h

@@ -1,12 +1,10 @@
 name: Build and push Docker image
 
 on:
-  # Rebuild automatically when the Dockerfile (or this workflow) changes
   push:
     paths:
       - 'docker/*.Dockerfile'
       - '.github/workflows/build-and-push-docker.yml'
-  # Allow manual trigger from the GitHub UI with optional custom tag
   workflow_dispatch:
     inputs:
       tag:
@@ -17,7 +15,6 @@ on:
 jobs:
   build-push:
     name: Build & Push to GHCR
-    # Build each Dockerfile under ./docker via a build matrix
     strategy:
       matrix:
         include:
@@ -29,7 +26,7 @@ jobs:
             suffix: -lumi
     runs-on: ubuntu-latest
     permissions:
-      packages: write   # needed to push to ghcr.io
+      packages: write  
       contents: read
 
     steps:
@@ -39,12 +36,6 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # --------------------------------------------------------------------
-      # Inspect free space *before* we start pulling base layers. The GitHub
-      # hosted runner has ~14 GB free by default, but large CUDA images can
-      # exceed this.  We also delete heavyweight SDKs that we do not need
-      # (dotnet, Android, GHC, toolcache) to reclaim >10 GB.
-      # --------------------------------------------------------------------
       - name: Show disk usage before cleanup
         run: |
           echo "=== df -h (before) ===" && df -h
@@ -58,24 +49,27 @@ jobs:
           sudo rm -rf /opt/hostedtoolcache || true
           sudo docker system prune -af || true
 
-      # Extra aggressive cleanup on the GitHub runner when building the ROCm-based
-      # Lumi image, which otherwise risks exceeding the disk quota due to
-      # large base layers.
       - name: Extra cleanup for Lumi
         if: ${{ matrix.suffix == '-lumi' }}
         run: |
+          # Remove heavy language runtimes / toolchains that are not required for the Docker build
+          sudo rm -rf /usr/local/go /usr/local/julia* /usr/share/swift /usr/lib/jvm /usr/local/lib/node_modules || true
+
+          # Purge additional unneeded APT packages (Java, Go, and common build toolchains)
+          sudo apt-get remove -y '^openjdk-.*' '^jdk-.*' gcc g++ clang build-essential || true
           sudo apt-get remove -y '^ghc-8.*' || true
           sudo apt-get remove -y '^llvm-.*' || true
           sudo apt-get remove -y 'php.*' || true
           sudo apt-get remove -y azure-cli google-cloud-sdk hhvm google-chrome-stable firefox powershell mono-devel || true
           sudo apt-get remove -y '^dotnet-.*' || true
+          # Final clean-up and reclaim space
+          sudo docker system prune -af || true
           sudo apt-get autoremove -y || true
           sudo apt-get clean || true
 
       - name: Show disk usage after cleanup
         run: df -h
 
-      # Buildx/QEMU for multi-arch (works even if you only need linux/amd64)
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
 
@@ -112,3 +106,18 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }} 
+      - name: Make GHCR package public
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          PACKAGE_NAME="eval_env${{ matrix.suffix }}"
+          OWNER="${{ github.repository_owner }}"
+          # Attempt to make the package public at the org level first; if that fails, fall back to the user scope
+          gh api --method PATCH \
+            -H "Accept: application/vnd.github+json" \
+            /orgs/${OWNER}/packages/container/${PACKAGE_NAME}/visibility \
+            -f visibility=public || \
+          gh api --method PATCH \
+            -H "Accept: application/vnd.github+json" \
+            /user/packages/container/${PACKAGE_NAME}/visibility \
+            -f visibility=public 

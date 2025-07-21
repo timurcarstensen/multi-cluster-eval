@@ -6,11 +6,7 @@ import socket
 import subprocess
 from datetime import datetime
 from itertools import product
-# Added for Singularity image management
 from pathlib import Path
-
-# Local utility to manage container images
-from .container_utils import ensure_singularity_image
 from string import Template
 from typing import Iterable
 
@@ -19,6 +15,10 @@ from jsonargparse import auto_cli
 from rich.console import Console
 from rich.logging import RichHandler
 from transformers import AutoModelForCausalLM
+
+# Local utility to manage container images
+from .container_utils import ensure_singularity_image
+
 
 def _setup_logging(debug: bool = False):
     rich_handler = RichHandler(
@@ -186,8 +186,8 @@ def _pre_download_task_datasets(tasks: Iterable[str], debug: bool = False) -> No
     """Ensure that all datasets required by the given `tasks` are present in the local 🤗 cache at $HF_HOME."""
 
     try:
-        from lm_eval.tasks import TaskManager  # type: ignore
         from datasets import DownloadMode  # type: ignore
+        from lm_eval.tasks import TaskManager  # type: ignore
     except Exception as import_err:
         logging.warning(
             "Could not import TaskManager from lm_eval.tasks – skipping dataset pre-download.\n%s",

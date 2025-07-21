@@ -75,12 +75,15 @@ do
     echo "  N-shot: $n_shot"
     echo "----------------------------------------------------"
 
-    apptainer exec --nv $EVAL_SIF_PATH python -m lm_eval --model hf \
-        --model_args pretrained="$model_path" \
-        --tasks "$task_path" \
-        --num_fewshot "$n_shot" \
-        --output_path $EVAL_OUTPUT_DIR \
-        --log_samples
+    apptainer exec --nv \
+        --bind $EVAL_BASE_DIR:$EVAL_BASE_DIR \
+        $EVAL_SIF_PATH \
+        python -m lm_eval --model hf \
+            --model_args pretrained="$model_path" \
+            --tasks "$task_path" \
+            --num_fewshot "$n_shot" \
+            --output_path $EVAL_OUTPUT_DIR \
+            --log_samples
 
     echo "Evaluation finished for model: $model_path"
 

@@ -8,7 +8,7 @@ RUN curl -LsSf https://astral.sh/uv/install.sh | sh \
 ENV PATH=/root/.local/bin:$PATH
 
 # 2. Install lm-eval and deps from PyPI
-RUN uv pip install --system lm-eval \
+RUN uv pip install --system --break-system-packages lm-eval \
     transformers "datasets<4.0.0" wandb sentencepiece accelerate
 
 WORKDIR /workspace

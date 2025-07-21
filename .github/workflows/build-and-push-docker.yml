@@ -67,6 +67,20 @@ jobs:
           sudo apt-get autoremove -y || true
           sudo apt-get clean || true
 
+          # Remove large, unnecessary SDKs and caches that apt may not handle
+          sudo rm -rf /opt/microsoft /opt/az /opt/google /opt/pipx /opt/actionarchivecache /opt/runner-cache || true
+
+          # Remove language/environment managers and SDKs installed under /usr/local that are not needed for Docker
+          sudo rm -rf /usr/local/rustup /usr/local/cargo /usr/local/go /usr/local/julia* /usr/local/miniconda /usr/local/heroku /usr/local/conda* || true
+
+          # Remove large cached resources and documentation
+          sudo rm -rf /usr/share/dotnet /usr/share/miniconda /usr/share/gradle /usr/share/kotlinc /usr/share/scala /usr/lib/llvm-* || true
+
+          # Strip documentation, manual pages and locales to reclaim additional space
+          sudo rm -rf /usr/share/{man,doc,info,locale,zoneinfo}/* || true
+
+          echo "=== df -h (after Lumi extra cleanup) ===" && df -h
+
       - name: Show disk usage after cleanup
         run: df -h
 
@@ -106,18 +120,4 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }} 
-      - name: Make GHCR package public
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          PACKAGE_NAME="eval_env${{ matrix.suffix }}"
-          OWNER="${{ github.repository_owner }}"
-          # Attempt to make the package public at the org level first; if that fails, fall back to the user scope
-          gh api --method PATCH \
-            -H "Accept: application/vnd.github+json" \
-            /orgs/${OWNER}/packages/container/${PACKAGE_NAME}/visibility \
-            -f visibility=public || \
-          gh api --method PATCH \
-            -H "Accept: application/vnd.github+json" \
-            /user/packages/container/${PACKAGE_NAME}/visibility \
-            -f visibility=public 
+          

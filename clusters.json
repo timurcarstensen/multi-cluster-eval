@@ -5,7 +5,8 @@
         "PYTHON_PATH": "{EVAL_BASE_DIR}/.venv",
         "HF_HOME": "{EVAL_BASE_DIR}/hf_data",
         "EVAL_OUTPUT_DIR": "{EVAL_BASE_DIR}/{USER}",
-        "EVAL_VENV_DIR": "{EVAL_BASE_DIR}/.venv"
+        "EVAL_SIF_PATH": "{EVAL_BASE_DIR}/eval.sif",
+        "EVAL_CONTAINER_IMAGE": "ghcr.io/oellm/eval_env:latest"
     },
     "leonardo": {
         "hostname_pattern": "*.leonardo.local",

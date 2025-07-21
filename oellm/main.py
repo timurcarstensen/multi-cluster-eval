@@ -6,7 +6,11 @@ import socket
 import subprocess
 from datetime import datetime
 from itertools import product
+# Added for Singularity image management
 from pathlib import Path
+
+# Local utility to manage container images
+from .container_utils import ensure_singularity_image
 from string import Template
 from typing import Iterable
 
@@ -265,8 +269,24 @@ def schedule_evals(
     """
     _setup_logging(debug)
 
-    # load the cluster environment variables
+    # Load cluster-specific environment variables (paths, etc.)
     _load_cluster_env()
+
+    # ------------------------------------------------------------------
+    # Ensure that the shared Singularity image derived from the Docker
+    # reference is present (or freshly rebuilt if missing). All users on
+    # a cluster share the same image under EVAL_SIF_PATH (configured in
+    # clusters.json). This avoids the brittle shared-venv approach.
+    # ------------------------------------------------------------------
+    docker_image = os.environ.get("EVAL_CONTAINER_IMAGE")
+    sif_path = os.environ.get("EVAL_SIF_PATH")
+
+    if not docker_image or not sif_path:
+        raise ValueError(
+            "Both EVAL_CONTAINER_IMAGE and EVAL_SIF_PATH must be set in the cluster configuration."
+        )
+
+    ensure_singularity_image(docker_image, Path(sif_path), debug)
 
     if eval_csv_path:
         if models or tasks or n_shot:

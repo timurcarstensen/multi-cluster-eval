@@ -22,6 +22,9 @@ export HUGGINGFACE_HUB_CACHE="$HF_HOME/hub"
 export HUGGINGFACE_ASSETS_CACHE="$HF_HOME/assets"
 export HF_HUB_OFFLINE=1
 
+# Path to the shared Singularity image that contains all runtime deps
+export EVAL_SIF_PATH=$EVAL_SIF_PATH
+
 echo "Running eval on $CSV_PATH with $NUM_JOBS concurrent jobs on $SBATCH_PARTITION with $SBATCH_GPUS_PER_NODE GPUs per node"
 echo "SLURM_JOB_ID: $SLURM_JOB_ID"
 echo "SLURM_ARRAY_JOB_ID: $SLURM_ARRAY_JOB_ID"
@@ -72,7 +75,7 @@ do
     echo "  N-shot: $n_shot"
     echo "----------------------------------------------------"
 
-    $EVAL_VENV_DIR/bin/python -m lm_eval --model hf \
+    apptainer exec --nv $EVAL_SIF_PATH python -m lm_eval --model hf \
         --model_args pretrained="$model_path" \
         --tasks "$task_path" \
         --num_fewshot "$n_shot" \

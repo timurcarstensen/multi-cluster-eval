@@ -29,6 +29,28 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      # --------------------------------------------------------------------
+      # Inspect free space *before* we start pulling base layers. The GitHub
+      # hosted runner has ~14 GB free by default, but large CUDA images can
+      # exceed this.  We also delete heavyweight SDKs that we do not need
+      # (dotnet, Android, GHC, toolcache) to reclaim >10 GB.
+      # --------------------------------------------------------------------
+      - name: Show disk usage before cleanup
+        run: |
+          echo "=== df -h (before) ===" && df -h
+          echo "=== Top-level disk usage under /opt ===" && du -h -d1 /opt | sort -hr | head -n20
+
+      - name: Free up disk space on runner
+        run: |
+          sudo rm -rf /usr/share/dotnet || true
+          sudo rm -rf /usr/local/lib/android || true
+          sudo rm -rf /opt/ghc || true
+          sudo rm -rf /opt/hostedtoolcache || true
+          sudo docker system prune -af || true
+
+      - name: Show disk usage after cleanup
+        run: df -h
+
       # Buildx/QEMU for multi-arch (works even if you only need linux/amd64)
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3

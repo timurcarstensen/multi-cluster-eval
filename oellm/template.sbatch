@@ -14,6 +14,12 @@ NUM_JOBS={num_jobs}
 
 # avoiding crashes due to compute nodes not having access to the internet
 export HF_HOME=$HF_HOME
+export HF_HUB_CACHE="$HF_HOME/hub"
+export TRANSFORMERS_CACHE="$HF_HOME/hub"
+export HF_XET_CACHE="$HF_HOME/xet"
+export HF_ASSETS_CACHE="$HF_HOME/assets"
+export HUGGINGFACE_HUB_CACHE="$HF_HOME/hub"
+export HUGGINGFACE_ASSETS_CACHE="$HF_HOME/assets"
 export HF_HUB_OFFLINE=1
 
 echo "Running eval on $CSV_PATH with $NUM_JOBS concurrent jobs on $SBATCH_PARTITION with $SBATCH_GPUS_PER_NODE GPUs per node"

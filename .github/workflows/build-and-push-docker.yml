@@ -1,43 +1,44 @@
-name: Build and push Docker image
+name: Build and push cluster images
 
 on:
   push:
     paths:
-      - 'Dockerfile'
+      - 'docker/**.Dockerfile'
       - '.github/workflows/build-and-push-docker.yml'
   workflow_dispatch:
     inputs:
-      tag:
-        description: 'Optional image tag (e.g. 25.06). Defaults to latest + commit SHA.'
+      cluster:
+        description: 'Cluster to build (jureca|leonardo|lumi|all)'
         required: false
         type: string
 
 jobs:
   build-push:
-    name: Build & Push to GHCR
+    if: github.event_name == 'workflow_dispatch' && github.event.inputs.cluster == '' || github.event_name != 'workflow_dispatch'
     runs-on: ubuntu-latest
-    permissions:
-      packages: write   # needed to push to ghcr.io
-      contents: read
-
+    strategy:
+      matrix:
+        cluster: [jureca, leonardo, lumi]
     steps:
-      - name: Delete huge unnecessary tools folder
-        run: rm -rf /opt/hostedtoolcache
+      - name: Skip if manual dispatch targets single cluster
+        if: github.event_name == 'workflow_dispatch' && github.event.inputs.cluster != 'all' && github.event.inputs.cluster != '' && github.event.inputs.cluster != matrix.cluster
+        run: echo "Skipping ${{ matrix.cluster }} build per workflow_dispatch input" && exit 0
 
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      # Inspect and free disk space (runner has ~14 GB free; CUDA base images need more)
       - name: Show disk usage before cleanup
         run: |
-          echo "=== df -h (before) ===" && df -h
-          echo "=== Top-level disk usage under /opt ===" && du -h -d1 /opt | sort -hr | head -n20
+          echo "=== df -h (before) ==="; df -h
+          echo "=== /opt usage ==="; du -h -d1 /opt | sort -hr | head -n 20
 
       - name: Free up disk space on runner
         run: |
-          sudo rm -rf /usr/share/dotnet || true
-          sudo rm -rf /usr/local/lib/android || true
-          sudo rm -rf /opt/ghc || true
-          sudo rm -rf /opt/hostedtoolcache || true
+          sudo rm -rf /usr/share/dotnet \
+                       /usr/local/lib/android \
+                       /opt/ghc \
+                       /opt/hostedtoolcache || true
           sudo docker system prune -af || true
 
       - name: Show disk usage after cleanup
@@ -60,46 +61,38 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ghcr.io/${{ github.repository_owner }}/eval_env
+          images: ghcr.io/${{ github.repository_owner }}/eval_env-${{ matrix.cluster }}
           tags: |
             type=raw,latest
             type=sha
-            type=raw,${{ github.event.inputs.tag }}
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
         with:
           context: .
-          file: Dockerfile
+          file: docker/${{ matrix.cluster }}.Dockerfile
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
 
-      # --------------------------------------------------------------------
-      # Ensure the pushed image is public so Singularity pulls work without
-      # credentials. We attempt both the org and user API endpoints; one will
-      # succeed depending on where the package lives.
-      # --------------------------------------------------------------------
-      - name: Set GHCR package visibility to public
+      - name: Make GHCR image public
         env:
           OWNER: ${{ github.repository_owner }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CLUSTER: ${{ matrix.cluster }}
         run: |
           set -e
-          pkg="eval_env"
-          echo "Setting visibility of $pkg to public for owner $OWNER"
-          api_org="https://api.github.com/orgs/$OWNER/packages/container/$pkg"
-          api_user="https://api.github.com/users/$OWNER/packages/container/$pkg"
-          for url in "$api_org" "$api_user"; do
+          pkg="eval_env-${CLUSTER}"
+          for scope in orgs users; do
+            url="https://api.github.com/${scope}/${OWNER}/packages/container/${pkg}"
             status=$(curl -s -o /dev/null -w "%{http_code}" -X PATCH \
               -H "Authorization: Bearer $GH_TOKEN" \
               -H "Accept: application/vnd.github+json" \
               "$url" \
               -d '{"visibility":"public"}') || true
             if [ "$status" = "200" ]; then
-              echo "Package made public via $url"; exit 0; fi
-            if [ "$status" = "404" ]; then
-              continue; fi
-            echo "GitHub API returned $status for $url"; exit 1
+              echo "${pkg} made public via $url"; exit 0; fi
+            if [ "$status" = "404" ]; then continue; fi
+            echo "GitHub API returned $status when setting visibility for $pkg"; exit 1
           done
-          echo "Package not found in org or user namespace"; exit 1 
+          echo "Package $pkg not found in org/user namespace"; exit 1 

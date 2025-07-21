@@ -16,6 +16,29 @@ from rich.console import Console
 from rich.logging import RichHandler
 from transformers import AutoModelForCausalLM
 
+def _setup_logging(debug: bool = False):
+    rich_handler = RichHandler(
+        console=Console(),
+        show_time=True,
+        log_time_format="%H:%M:%S",
+        show_path=False,
+        markup=True,
+        rich_tracebacks=True,
+    )
+
+    class RichFormatter(logging.Formatter):
+        def format(self, record):
+            # Define colors for different log levels
+            record.msg = f"{record.getMessage()}"
+            return record.msg
+
+    rich_handler.setFormatter(RichFormatter())
+
+    root_logger = logging.getLogger()
+    root_logger.handlers = []  # Remove any default handlers
+    root_logger.addHandler(rich_handler)
+    root_logger.setLevel(logging.DEBUG if debug else logging.INFO)
+
 
 def _load_cluster_env() -> None:
     """
@@ -240,6 +263,8 @@ def schedule_evals(
             Warning: this is not the number of jobs in the array job. This is determined by the environment variable `QUEUE_LIMIT`.
         download_only: If True, only download the datasets and models and exit.
     """
+    _setup_logging(debug)
+
     # load the cluster environment variables
     _load_cluster_env()
 
@@ -375,26 +400,4 @@ def schedule_evals(
 
 
 def main():
-    rich_handler = RichHandler(
-        console=Console(),
-        show_time=True,
-        log_time_format="%H:%M:%S",
-        show_path=False,
-        markup=True,
-        rich_tracebacks=True,
-    )
-
-    class RichFormatter(logging.Formatter):
-        def format(self, record):
-            # Define colors for different log levels
-            record.msg = f"{record.getMessage()}"
-            return record.msg
-
-    rich_handler.setFormatter(RichFormatter())
-
-    root_logger = logging.getLogger()
-    root_logger.handlers = []  # Remove any default handlers
-    root_logger.addHandler(rich_handler)
-    root_logger.setLevel(logging.INFO)
-
     auto_cli({"schedule-eval": schedule_evals}, as_positional=False)

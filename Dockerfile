@@ -1,12 +1,15 @@
 FROM nvcr.io/nvidia/pytorch:25.06-py3
 
-# uv + deps
-RUN curl -LsSf https://astral.sh/uv/install.sh | sh
+# 1. Install uv
+RUN curl -LsSf https://astral.sh/uv/install.sh | sh \
+ && echo 'export PATH=$HOME/.local/bin:$PATH' >> /etc/profile
 
-# Install lm-eval-harness directly from PyPI to avoid git cloning issues
+# Make uv visible for every subsequent RUN/CMD
+ENV PATH=/root/.local/bin:$PATH
+
+# 2. Install lm-eval and deps from PyPI
 RUN uv pip install lm-eval \
     transformers "datasets<4.0.0" wandb sentencepiece accelerate
 
 WORKDIR /workspace
-
 CMD ["bash"] 

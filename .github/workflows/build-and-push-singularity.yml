@@ -49,6 +49,32 @@ jobs:
           sudo rm -rf /opt/hostedtoolcache || true
           sudo docker system prune -af || true
 
+          sudo rm -rf /usr/local/go /usr/local/julia* /usr/share/swift /usr/lib/jvm /usr/local/lib/node_modules || true
+
+          # Purge additional unneeded APT packages (Java, Go, and common build toolchains)
+          sudo apt-get remove -y '^openjdk-.*' '^jdk-.*' gcc g++ clang build-essential || true
+          sudo apt-get remove -y '^ghc-8.*' || true
+          sudo apt-get remove -y '^llvm-.*' || true
+          sudo apt-get remove -y 'php.*' || true
+          sudo apt-get remove -y azure-cli google-cloud-sdk hhvm google-chrome-stable firefox powershell mono-devel || true
+          sudo apt-get remove -y '^dotnet-.*' || true
+          # Final clean-up and reclaim space
+          sudo docker system prune -af || true
+          sudo apt-get autoremove -y || true
+          sudo apt-get clean || true
+
+          # Remove large, unnecessary SDKs and caches that apt may not handle
+          sudo rm -rf /opt/microsoft /opt/az /opt/google /opt/pipx /opt/actionarchivecache /opt/runner-cache || true
+
+          # Remove language/environment managers and SDKs installed under /usr/local that are not needed for Docker
+          sudo rm -rf /usr/local/rustup /usr/local/cargo /usr/local/go /usr/local/julia* /usr/local/miniconda /usr/local/heroku /usr/local/conda* || true
+
+          # Remove large cached resources and documentation
+          sudo rm -rf /usr/share/dotnet /usr/share/miniconda /usr/share/gradle /usr/share/kotlinc /usr/share/scala /usr/lib/llvm-* || true
+
+          # Strip documentation, manual pages and locales to reclaim additional space
+          sudo rm -rf /usr/share/{man,doc,info,locale,zoneinfo}/* || true
+
       # Build Docker image as an intermediate layer that will be converted to SIF
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -60,6 +86,7 @@ jobs:
           file: ${{ matrix.dockerfile }}
           load: true              # load into local Docker daemon instead of pushing
           tags: eval_env${{ matrix.suffix }}:latest
+          push: false
 
       - name: Save Docker image to tar
         run: docker save eval_env${{ matrix.suffix }}:latest -o image.tar

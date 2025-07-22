@@ -26,29 +26,29 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Show disk usage before cleanup
-        run: |
-          echo "=== df -h (before) ===" && df -h
-          echo "=== Top-level disk usage under /opt ===" && du -h -d1 /opt | sort -hr | head -n20
+      # - name: Show disk usage before cleanup
+      #   run: |
+      #     echo "=== df -h (before) ===" && df -h
+      #     echo "=== Top-level disk usage under /opt ===" && du -h -d1 /opt | sort -hr | head -n20
 
-      - name: Free up disk space on runner (optional but helpful)
-        run: |
-          sudo rm -rf /usr/share/dotnet || true
-          sudo rm -rf /usr/local/lib/android || true
-          sudo rm -rf /opt/ghc || true
-          sudo rm -rf /opt/hostedtoolcache || true
-          sudo docker system prune -af || true
+      # - name: Free up disk space on runner (optional but helpful)
+      #   run: |
+      #     sudo rm -rf /usr/share/dotnet || true
+      #     sudo rm -rf /usr/local/lib/android || true
+      #     sudo rm -rf /opt/ghc || true
+      #     sudo rm -rf /opt/hostedtoolcache || true
+      #     sudo docker system prune -af || true
 
-          sudo rm -rf /usr/local/julia* /usr/share/swift /usr/lib/jvm /usr/local/lib/node_modules || true
+      #     sudo rm -rf /usr/local/julia* /usr/share/swift /usr/lib/jvm /usr/local/lib/node_modules || true
 
-          # Purge additional unneeded APT packages (Java, and common build toolchains)
-          sudo apt-get remove -y '^openjdk-.*' '^jdk-.*' '^dotnet-.*' || true
-          sudo apt-get remove -y azure-cli google-cloud-sdk hhvm google-chrome-stable firefox powershell mono-devel || true
-          sudo apt-get autoremove -y || true
-          sudo apt-get clean || true
+      #     # Purge additional unneeded APT packages (Java, and common build toolchains)
+      #     sudo apt-get remove -y '^openjdk-.*' '^jdk-.*' '^dotnet-.*' || true
+      #     sudo apt-get remove -y azure-cli google-cloud-sdk hhvm google-chrome-stable firefox powershell mono-devel || true
+      #     sudo apt-get autoremove -y || true
+      #     sudo apt-get clean || true
 
-          # Remove caches
-          sudo rm -rf /opt/microsoft /opt/az /opt/google /opt/pipx /opt/actionarchivecache /opt/runner-cache || true
+      #     # Remove caches
+      #     sudo rm -rf /opt/microsoft /opt/az /opt/google /opt/pipx /opt/actionarchivecache /opt/runner-cache || true
 
       - name: Install Apptainer
         run: |
@@ -60,7 +60,7 @@ jobs:
 
       - name: Build SIF from definition file
         run: |
-          sudo apptainer build --fakeroot eval_env-leonardo.sif apptainer/leonardo.def
+          apptainer build --fakeroot eval_env-leonardo.sif apptainer/leonardo.def
 
       - name: Upload SIF artifact
         uses: actions/upload-artifact@v4

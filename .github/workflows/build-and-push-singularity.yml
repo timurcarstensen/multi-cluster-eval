@@ -1,0 +1,81 @@
+name: Build and push Singularity image
+
+on:
+  push:
+    paths:
+      - 'docker/*.Dockerfile'
+      - '.github/workflows/build-and-push-singularity.yml'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Optional image tag (e.g. 25.06). Defaults to latest + commit SHA.'
+        required: false
+        type: string
+
+jobs:
+  build-push:
+    name: Build & Publish SIF Artifact
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - dockerfile: docker/jureca.Dockerfile
+            suffix: -jureca
+          - dockerfile: docker/leonardo.Dockerfile
+            suffix: -leonardo
+          # disabled lumi for now since the rocm/pytorch image is too large for the free-tier runner
+            # - dockerfile: docker/lumi.Dockerfile
+            #   suffix: -lumi
+    permissions:
+      contents: read
+
+    steps:
+      - name: Delete huge unnecessary tools folder
+        run: rm -rf /opt/hostedtoolcache
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Show disk usage before cleanup
+        run: |
+          echo "=== df -h (before) ===" && df -h
+          echo "=== Top-level disk usage under /opt ===" && du -h -d1 /opt | sort -hr | head -n20
+
+      - name: Free up disk space on runner
+        run: |
+          sudo rm -rf /usr/share/dotnet || true
+          sudo rm -rf /usr/local/lib/android || true
+          sudo rm -rf /opt/ghc || true
+          sudo rm -rf /opt/hostedtoolcache || true
+          sudo docker system prune -af || true
+
+      # Build Docker image as an intermediate layer that will be converted to SIF
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build Docker image (intermediate)
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ${{ matrix.dockerfile }}
+          load: true              # load into local Docker daemon instead of pushing
+          tags: eval_env${{ matrix.suffix }}:latest
+
+      - name: Save Docker image to tar
+        run: docker save eval_env${{ matrix.suffix }}:latest -o image.tar
+
+      # Install Singularity (now called Apptainer) CLI
+      - name: Set up Singularity
+        uses: eWaterCycle/setup-singularity@v7
+        with:
+          singularity-version: '3.11.4'
+
+      - name: Convert Docker image to SIF
+        run: |
+          sudo singularity build --fakeroot eval_env${{ matrix.suffix }}.sif docker-archive://image.tar
+
+      - name: Upload SIF artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: eval_env${{ matrix.suffix }}.sif
+          path: eval_env${{ matrix.suffix }}.sif 

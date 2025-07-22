@@ -15,9 +15,11 @@ on:
 jobs:
   build-push:
     name: Build & Publish SIF Artifact (Apptainer only)
-    runs-on: ubuntu-latest
+    runs-on: 
+      - runs-on=${{github.run_id}}/runner=2cpu-linux-x64/disk=large
     permissions:
       contents: read
+      packages: write
 
     steps:
       - name: Delete huge unnecessary tools folder
@@ -63,12 +65,22 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y apptainer
 
+      - name: Login to GHCR for ORAS push
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Add ORAS registry as remote if not present
+          apptainer remote list | grep -q "ghcr" || apptainer remote add --no-login ghcr oras://ghcr.io
+          # Authenticate using the GitHub token for this repository (packages:write permission)
+          echo "$GH_TOKEN" | apptainer remote login -u "${{ github.actor }}" ghcr
+
       - name: Build SIF from definition file
         run: |
           apptainer --verbose build --fakeroot eval_env-leonardo.sif apptainer/leonardo.def
 
-      - name: Upload SIF artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: eval_env-leonardo.sif
-          path: eval_env-leonardo.sif 
+      - name: Push SIF to GHCR (ORAS)
+        env:
+          IMAGE_TAG: ${{ github.event.inputs.tag || github.sha }}
+          GHCR_REPO: ghcr.io/${{ github.repository }}
+        run: |
+          apptainer push --allow-unsigned eval_env-leonardo.sif oras://$GHCR_REPO/eval_env-leonardo:$IMAGE_TAG 

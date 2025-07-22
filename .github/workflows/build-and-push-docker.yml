@@ -22,7 +22,7 @@ jobs:
             suffix: -jureca
           - dockerfile: docker/leonardo.Dockerfile
             suffix: -leonardo
-          - dockerfile: docker/lumi.Dockerfile
+          - dockerfile: docker/lumi_slim.Dockerfile
             suffix: -lumi
     runs-on: ubuntu-latest
     permissions:

@@ -16,7 +16,7 @@ jobs:
   build-push:
     name: Build & Publish SIF Artifact (Apptainer only)
     runs-on: 
-      - runs-on=${{github.run_id}}/runner=8cpu-linux-x64/disk=large
+      - runs-on=${{github.run_id}}/runner=linux-x64/family=m6gd.2xlarge
     permissions:
       contents: read
       packages: write
@@ -78,6 +78,6 @@ jobs:
       - name: Push SIF to GHCR (ORAS)
         env:
           IMAGE_TAG: ${{ github.event.inputs.tag || github.sha }}
-          GHCR_REPO: ghcr.io/${{ github.repository_owner }}
         run: |
-          apptainer push --allow-unsigned eval_env-leonardo.sif oras://$GHCR_REPO/eval_env-leonardo:$IMAGE_TAG 
+          OWNER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
+          apptainer push --allow-unsigned eval_env-leonardo.sif oras://ghcr.io/$OWNER/eval_env-leonardo:$IMAGE_TAG 

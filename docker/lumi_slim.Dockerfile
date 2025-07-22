@@ -11,8 +11,9 @@ FROM ubuntu:24.04
 ENV DEBIAN_FRONTEND=noninteractive
 
 # Copy only the ROCm runtime tree we need
-COPY --from=rocm_binary /opt/rocm-${ROCM_VER} /opt/rocm-${ROCM_VER}
-RUN ln -s /opt/rocm-${ROCM_VER} /opt/rocm
+COPY --from=rocm_binary /opt/rocm /opt/rocm
+# Provide a versioned symlink for software that expects it
+RUN ln -s /opt/rocm /opt/rocm-${ROCM_VER} || true
 
 # Install minimal system libraries required by PyTorch & common ML tooling
 RUN apt-get update && \

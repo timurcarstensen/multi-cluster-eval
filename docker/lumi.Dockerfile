@@ -11,5 +11,7 @@ ENV PATH=/root/.local/bin:$PATH
 RUN uv pip install --system --break-system-packages lm-eval \
     transformers "datasets<4.0.0" wandb sentencepiece accelerate
 
+LABEL org.opencontainers.image.source=https://github.com/OpenEuroLLM/multi-cluster-eval
+
 WORKDIR /workspace
 CMD ["bash"] 

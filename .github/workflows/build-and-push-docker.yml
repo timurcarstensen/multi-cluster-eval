@@ -22,8 +22,9 @@ jobs:
             suffix: -jureca
           - dockerfile: docker/leonardo.Dockerfile
             suffix: -leonardo
-          - dockerfile: docker/lumi_slim.Dockerfile
-            suffix: -lumi
+          # disabled lumi for now since the rocm/pytorch image is too large for the free-tier runner
+            # - dockerfile: docker/lumi.Dockerfile
+          #   suffix: -lumi
     runs-on: ubuntu-latest
     permissions:
       packages: write  

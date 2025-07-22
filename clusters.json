@@ -6,7 +6,6 @@
         "HF_HOME": "{EVAL_BASE_DIR}/hf_data",
         "EVAL_OUTPUT_DIR": "{EVAL_BASE_DIR}/{USER}",
         "EVAL_SIF_PATH": "{EVAL_BASE_DIR}/eval.sif",
-        "EVAL_CONTAINER_IMAGE": "ghcr.io/oellm/eval_env:latest"
     },
     "leonardo": {
         "hostname_pattern": "*.leonardo.local",
@@ -14,7 +13,8 @@
         "PARTITION": "boost_usr_prod",
         "ACCOUNT": "AIFAC_L01_028",
         "QUEUE_LIMIT": 1000,
-        "GPUS_PER_NODE": 4
+        "GPUS_PER_NODE": 4,
+        "EVAL_CONTAINER_IMAGE": "ghcr.io/openeurollm/eval_env-leonardo:latest"
     },
     "jureca": {
         "hostname_pattern": "*.jureca",
@@ -22,7 +22,8 @@
         "PARTITION": "dc-gpu",
         "ACCOUNT": "synthlaion",
         "QUEUE_LIMIT": 512,
-        "GPUS_PER_NODE": 4
+        "GPUS_PER_NODE": 4,
+        "EVAL_CONTAINER_IMAGE": "ghcr.io/openeurollm/eval_env-jureca:latest"
     },
     "lumi": {
         "hostname_pattern": "uan*",
@@ -30,6 +31,7 @@
         "PARTITION": "small-g",
         "ACCOUNT": "project_462000963",
         "QUEUE_LIMIT": 210,
-        "GPUS_PER_NODE": 4
+        "GPUS_PER_NODE": 4,
+        "EVAL_CONTAINER_IMAGE": "ghcr.io/openeurollm/eval_env-lumi:latest"
     }
 }

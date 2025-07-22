@@ -69,10 +69,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          # Add ORAS registry as remote if not present
-          apptainer remote list | grep -q "ghcr" || apptainer remote add --no-login ghcr oras://ghcr.io
-          # Authenticate using the GitHub token for this repository (packages:write permission)
-          echo "$GH_TOKEN" | apptainer remote login -u "${{ github.actor }}" ghcr
+          echo "$GH_TOKEN" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
 
       - name: Build SIF from definition file
         run: |

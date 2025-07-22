@@ -22,15 +22,17 @@ RUN apt-get update && \
         libjpeg-turbo8 \
         libtinfo6 \
         python3 \
-        python3-pip && \
+        python3-pip \
+        curl && \
     rm -rf /var/lib/apt/lists/*
 
-# Set up ROCm environment paths
-ENV PATH=/opt/rocm/bin:$PATH \
-    LD_LIBRARY_PATH=/opt/rocm/lib:/opt/rocm/lib64:$LD_LIBRARY_PATH
+# Set up ROCm environment paths (include uv once installed)
+ENV PATH=/root/.local/bin:/opt/rocm/bin:$PATH
+ENV LD_LIBRARY_PATH=/opt/rocm/lib:/opt/rocm/lib64
 
-RUN curl -LsSf https://astral.sh/uv/install.sh | sh  && echo 'export PATH=$HOME/.local/bin:$PATH' >> /etc/profile && \
-    uv pip install --system --break-system-packages --no-cache-dir --pre \
+# Install uv Python package manager and then required Python wheels
+RUN curl -LsSf https://astral.sh/uv/install.sh | sh && \
+    /root/.local/bin/uv pip install --system --break-system-packages --no-cache-dir --pre \
         torch==2.7.1+rocm6.4.1 \
         torchvision \
         torchaudio \

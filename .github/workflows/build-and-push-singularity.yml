@@ -49,10 +49,10 @@ jobs:
           sudo rm -rf /opt/hostedtoolcache || true
           sudo docker system prune -af || true
 
-          sudo rm -rf /usr/local/go /usr/local/julia* /usr/share/swift /usr/lib/jvm /usr/local/lib/node_modules || true
+          sudo rm -rf /usr/local/julia* /usr/share/swift /usr/lib/jvm /usr/local/lib/node_modules || true
 
-          # Purge additional unneeded APT packages (Java, Go, and common build toolchains)
-          sudo apt-get remove -y '^openjdk-.*' '^jdk-.*' gcc g++ clang build-essential || true
+          # Purge additional unneeded APT packages (Java, and common build toolchains)
+          sudo apt-get remove -y '^openjdk-.*' '^jdk-.*' || true
           sudo apt-get remove -y '^ghc-8.*' || true
           sudo apt-get remove -y '^llvm-.*' || true
           sudo apt-get remove -y 'php.*' || true
@@ -67,7 +67,7 @@ jobs:
           sudo rm -rf /opt/microsoft /opt/az /opt/google /opt/pipx /opt/actionarchivecache /opt/runner-cache || true
 
           # Remove language/environment managers and SDKs installed under /usr/local that are not needed for Docker
-          sudo rm -rf /usr/local/rustup /usr/local/cargo /usr/local/go /usr/local/julia* /usr/local/miniconda /usr/local/heroku /usr/local/conda* || true
+          sudo rm -rf /usr/local/julia* /usr/local/miniconda /usr/local/heroku /usr/local/conda* || true
 
           # Remove large cached resources and documentation
           sudo rm -rf /usr/share/dotnet /usr/share/miniconda /usr/share/gradle /usr/share/kotlinc /usr/share/scala /usr/lib/llvm-* || true

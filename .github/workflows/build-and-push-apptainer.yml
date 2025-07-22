@@ -16,7 +16,7 @@ jobs:
   build-push:
     name: Build & Publish SIF Artifact (Apptainer only)
     runs-on: 
-      - runs-on=${{github.run_id}}/runner=linux-x64/family=m6gd.2xlarge
+      - runs-on=${{github.run_id}}/runner=8cpu-linux-x64/disk=large
     permissions:
       contents: read
       packages: write

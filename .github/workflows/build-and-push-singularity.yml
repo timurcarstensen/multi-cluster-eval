@@ -79,17 +79,12 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Build Docker image (intermediate)
+      - name: Build OCI tarball
         uses: docker/build-push-action@v5
         with:
           context: .
           file: ${{ matrix.dockerfile }}
-          load: true              # load into local Docker daemon instead of pushing
-          tags: eval_env${{ matrix.suffix }}:latest
-          push: false
-
-      - name: Save Docker image to tar
-        run: docker save eval_env${{ matrix.suffix }}:latest -o image.tar
+          outputs: type=oci,dest=/tmp/image.oci.tar
 
       # Install Singularity (now called Apptainer) CLI
       - name: Set up Singularity
@@ -97,9 +92,13 @@ jobs:
         with:
           singularity-version: '3.11.4'
 
-      - name: Convert Docker image to SIF
+      - name: Convert OCI archive to SIF
         run: |
-          sudo singularity build --fakeroot eval_env${{ matrix.suffix }}.sif docker-archive://image.tar
+          sudo singularity build --fakeroot eval_env${{ matrix.suffix }}.sif oci-archive:///tmp/image.oci.tar
+          rm -f /tmp/image.oci.tar
+
+      - name: Cleanup build cache
+        run: docker buildx prune -af
 
       - name: Upload SIF artifact
         uses: actions/upload-artifact@v4

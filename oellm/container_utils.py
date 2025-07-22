@@ -76,7 +76,7 @@ def ensure_singularity_image(
     build_cmd = [
         "singularity",
         "build",
-        "--yes",  # skip interactive overwrite prompts
+        "--force",  # skip interactive overwrite prompts
         str(tmp_path),
         f"docker://{docker_image}",
     ]

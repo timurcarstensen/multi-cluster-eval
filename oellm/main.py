@@ -115,9 +115,7 @@ def _parse_user_queue_load() -> int:
     return 0
 
 
-def _process_model_paths(
-    models: Iterable[str]
-) -> dict[str, list[Path | str]]:
+def _process_model_paths(models: Iterable[str]) -> dict[str, list[Path | str]]:
     """
     Processes model strings into a dict of model paths.
 
@@ -156,9 +154,7 @@ def _process_model_paths(
             if "," in model:
                 model_kwargs = {
                     k: v
-                    for k, v in [
-                        kv.split("=") for kv in model.split(",") if "=" in kv
-                    ]
+                    for k, v in [kv.split("=") for kv in model.split(",") if "=" in kv]
                 }
 
                 # The first element before the comma is the repository ID on the 🤗 Hub
@@ -174,7 +170,7 @@ def _process_model_paths(
                     # compute nodes can load it offline.
                     snapshot_download(
                         repo_id=repo_id,
-                        cache_dir=os.getenv("HF_HOME"),
+                        cache_dir=Path(os.getenv("HF_HOME")) / "hub",
                         **snapshot_kwargs,
                     )
                     model_paths.append(model)
@@ -188,7 +184,10 @@ def _process_model_paths(
                 # original identifier is kept in *model_paths* so downstream
                 # code can still reference it; at runtime the files will be
                 # read from cache, allowing offline execution.
-                snapshot_download(repo_id=model, cache_dir=os.getenv("HF_HOME"))
+                snapshot_download(
+                    repo_id=model,
+                    cache_dir=Path(os.getenv("HF_HOME")) / "hub",
+                )
                 model_paths.append(model)
 
         if not model_paths:
@@ -297,8 +296,10 @@ def schedule_evals(
     # ------------------------------------------------------------------
     image_name = os.environ.get("EVAL_CONTAINER_IMAGE")
     if image_name is None:
-        raise ValueError("EVAL_CONTAINER_IMAGE is not set. Please set it in clusters.json.")
-    
+        raise ValueError(
+            "EVAL_CONTAINER_IMAGE is not set. Please set it in clusters.json."
+        )
+
     ensure_singularity_image(image_name)
 
     if eval_csv_path:

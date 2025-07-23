@@ -80,9 +80,10 @@ jobs:
         env:
           HF_REPO: timurcarstensen/testing
         run: |
-          huggingface-cli upload "$HF_REPO" \
+          huggingface-cli upload \
+            "$HF_REPO" \
+            eval_env-leonardo.sif \
             eval_env-leonardo.sif \
             --repo-type dataset \
-            --path-in-repo eval_env-leonardo.sif \
             --commit-message "[chore] update leonardo image" \
             -y 

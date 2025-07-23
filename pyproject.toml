@@ -24,6 +24,7 @@ build-backend = "uv_build"
 [tool.uv.build-backend]
 module-name = "oellm"
 module-root = ""
+include = ["oellm/clusters.json"]
 
 [tool.uv.sources]
 torch = [

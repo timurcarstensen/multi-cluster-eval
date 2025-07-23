@@ -50,7 +50,7 @@ def _load_cluster_env() -> None:
     """
     Loads the correct cluster environment variables from `clusters.json` based on the hostname.
     """
-    with open(Path(__file__).parent.parent / "clusters.json", "r") as f:
+    with open(Path(__file__).parent / "clusters.json", "r") as f:
         clusters = json.load(f)
     hostname = socket.gethostname()
 

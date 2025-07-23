@@ -172,7 +172,11 @@ def _process_model_paths(
                 try:
                     # Pre-download (or reuse cache) for the whole repository so that
                     # compute nodes can load it offline.
-                    snapshot_download(repo_id=repo_id, **snapshot_kwargs)
+                    snapshot_download(
+                        repo_id=repo_id,
+                        cache_dir=os.getenv("HF_HOME"),
+                        **snapshot_kwargs,
+                    )
                     model_paths.append(model)
                 except Exception as e:
                     logging.debug(
@@ -184,7 +188,7 @@ def _process_model_paths(
                 # original identifier is kept in *model_paths* so downstream
                 # code can still reference it; at runtime the files will be
                 # read from cache, allowing offline execution.
-                snapshot_download(repo_id=model)
+                snapshot_download(repo_id=model, cache_dir=os.getenv("HF_HOME"))
                 model_paths.append(model)
 
         if not model_paths:

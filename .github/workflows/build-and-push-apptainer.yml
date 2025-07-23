@@ -1,9 +1,9 @@
-name: Build and push Apptainer image (Leonardo)
+name: Build and push Apptainer images
 
 on:
   push:
     paths:
-      - 'apptainer/leonardo.def'
+      - 'apptainer/*.def'
       - '.github/workflows/build-and-push-apptainer.yml'
   workflow_dispatch:
     inputs:
@@ -14,7 +14,10 @@ on:
 
 jobs:
   build-push:
-    name: Build & Publish SIF Artifact (Apptainer only)
+    strategy:
+      matrix:
+        image: [jureca, leonardo, lumi]
+    name: Build & Publish SIF Artifact (${{ matrix.image }})
     runs-on: 
       - runs-on=${{github.run_id}}/family=i7ie
     permissions:
@@ -66,7 +69,7 @@ jobs:
 
       - name: Build SIF from definition file
         run: |
-          apptainer --verbose build --fakeroot eval_env-leonardo.sif apptainer/leonardo.def
+          apptainer --verbose build --fakeroot eval_env-${{ matrix.image }}.sif apptainer/${{ matrix.image }}.def
 
       - name: Install Hugging Face Hub CLI
         run: pip install --upgrade "huggingface_hub[cli]"
@@ -82,7 +85,7 @@ jobs:
         run: |
           huggingface-cli upload \
             "$HF_REPO" \
-            eval_env-leonardo.sif \
-            eval_env-leonardo.sif \
+            eval_env-${{ matrix.image }}.sif \
+            eval_env-${{ matrix.image }}.sif \
             --repo-type dataset \
-            --commit-message "[chore] update leonardo image"
+            --commit-message "[chore] update ${{ matrix.image }} image"

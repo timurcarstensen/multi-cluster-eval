@@ -11,15 +11,27 @@ from pathlib import Path
 from string import Template
 from typing import Iterable
 
-# Third-party imports
 import pandas as pd
+from huggingface_hub import hf_hub_download, snapshot_download
 from jsonargparse import auto_cli
 from rich.console import Console
 from rich.logging import RichHandler
-from huggingface_hub import snapshot_download
 
-# Local utility to manage container images
-from .container_utils import ensure_singularity_image
+
+def ensure_singularity_image(image_name: str) -> None:
+    # TODO: switch to OELLM dataset repo once it is created
+    hf_repo = os.environ.get("HF_SIF_REPO", "timurcarstensen/testing")
+    hf_hub_download(
+        repo_id=hf_repo,
+        filename=image_name,
+        repo_type="dataset",
+        local_dir=os.getenv("EVAL_BASE_DIR"),
+    )
+
+    logging.info(
+        "Singularity image ready at %s",
+        Path(os.getenv("EVAL_SIF_PATH")) / os.getenv("EVAL_CONTAINER_IMAGE"),
+    )
 
 
 def _setup_logging(debug: bool = False):

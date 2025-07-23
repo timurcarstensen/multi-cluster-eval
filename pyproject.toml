@@ -9,6 +9,7 @@ dependencies = [
     "jsonargparse",
     "datasets<4.0.0",
     "rich",
+    "torch",
     "lm-eval",
     "huggingface_hub",
 ]
@@ -23,3 +24,16 @@ build-backend = "uv_build"
 [tool.uv.build-backend]
 module-name = "oellm"
 module-root = ""
+
+[tool.uv.sources]
+torch = [
+    { index = "pytorch-cpu" },
+]
+torchvision = [
+    { index = "pytorch-cpu" },
+]
+
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true

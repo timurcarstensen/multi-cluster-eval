@@ -19,43 +19,42 @@ jobs:
       - runs-on=${{github.run_id}}/runner=8cpu-linux-x64/disk=large
     permissions:
       contents: read
-      packages: write
 
     steps:
-      - name: Delete huge unnecessary tools folder
-        run: rm -rf /opt/hostedtoolcache
+      # - name: Delete huge unnecessary tools folder
+      #   run: rm -rf /opt/hostedtoolcache
 
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Show disk usage before cleanup
-        run: |
-          echo "=== df -h (before) ===" && df -h
-          echo "=== Top-level disk usage under /opt ===" && du -h -d1 /opt | sort -hr | head -n20
+      # - name: Show disk usage before cleanup
+      #   run: |
+      #     echo "=== df -h (before) ===" && df -h
+      #     echo "=== Top-level disk usage under /opt ===" && du -h -d1 /opt | sort -hr | head -n20
 
-      - name: Free up disk space on runner (optional but helpful)
-        run: |
-          sudo rm -rf /usr/share/dotnet || true
-          sudo rm -rf /usr/local/lib/android || true
-          sudo rm -rf /opt/ghc || true
-          sudo rm -rf /opt/hostedtoolcache || true
-          sudo docker system prune -af || true
+      # - name: Free up disk space on runner (optional but helpful)
+      #   run: |
+      #     sudo rm -rf /usr/share/dotnet || true
+      #     sudo rm -rf /usr/local/lib/android || true
+      #     sudo rm -rf /opt/ghc || true
+      #     sudo rm -rf /opt/hostedtoolcache || true
+      #     sudo docker system prune -af || true
 
-          sudo rm -rf /usr/local/julia* /usr/share/swift /usr/lib/jvm /usr/local/lib/node_modules || true
+      #     sudo rm -rf /usr/local/julia* /usr/share/swift /usr/lib/jvm /usr/local/lib/node_modules || true
 
-          # Purge additional unneeded APT packages (Java, and common build toolchains)
-          sudo apt-get remove -y '^openjdk-.*' '^jdk-.*' '^dotnet-.*' || true
-          sudo apt-get remove -y azure-cli google-cloud-sdk hhvm google-chrome-stable firefox powershell mono-devel || true
-          sudo apt-get autoremove -y || true
-          sudo apt-get clean || true
+      #     # Purge additional unneeded APT packages (Java, and common build toolchains)
+      #     sudo apt-get remove -y '^openjdk-.*' '^jdk-.*' '^dotnet-.*' || true
+      #     sudo apt-get remove -y azure-cli google-cloud-sdk hhvm google-chrome-stable firefox powershell mono-devel || true
+      #     sudo apt-get autoremove -y || true
+      #     sudo apt-get clean || true
 
-          # Remove caches
-          sudo rm -rf /opt/microsoft /opt/az /opt/google /opt/pipx /opt/actionarchivecache /opt/runner-cache || true
+      #     # Remove caches
+      #     sudo rm -rf /opt/microsoft /opt/az /opt/google /opt/pipx /opt/actionarchivecache /opt/runner-cache || true
 
-      - name: Show disk usage after cleanup
-        run: |
-          echo "=== df -h (before) ===" && df -h
-          echo "=== Top-level disk usage under /opt ===" && du -h -d1 /opt | sort -hr | head -n20
+      # - name: Show disk usage after cleanup
+      #   run: |
+      #     echo "=== df -h (before) ===" && df -h
+      #     echo "=== Top-level disk usage under /opt ===" && du -h -d1 /opt | sort -hr | head -n20
       
       - name: Install Apptainer
         run: |
@@ -65,19 +64,25 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y apptainer
 
-      - name: Login to GHCR for ORAS push
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          echo "$GH_TOKEN" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
-
       - name: Build SIF from definition file
         run: |
           apptainer --verbose build --fakeroot eval_env-leonardo.sif apptainer/leonardo.def
 
-      - name: Push SIF to GHCR (ORAS)
+      - name: Install Hugging Face Hub CLI
+        run: pip install --upgrade "huggingface_hub[cli]"
+
+      - name: Login to Hugging Face Hub
         env:
-          IMAGE_TAG: ${{ github.event.inputs.tag || github.sha }}
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        run: huggingface-cli login --token "$HF_TOKEN" --add-to-git-credential
+
+      - name: Upload SIF to Hugging Face Hub
+        env:
+          HF_REPO: timurcarstensen/testing
         run: |
-          OWNER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
-          apptainer push --allow-unsigned eval_env-leonardo.sif oras://ghcr.io/$OWNER/eval_env-leonardo:$IMAGE_TAG 
+          huggingface-cli upload "$HF_REPO" \
+            eval_env-leonardo.sif \
+            --repo-type dataset \
+            --path-in-repo eval_env-leonardo.sif \
+            --commit-message "[chore] update leonardo image" \
+            -y 

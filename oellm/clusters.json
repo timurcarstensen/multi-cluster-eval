@@ -8,7 +8,7 @@
     },
     "leonardo": {
         "hostname_pattern": "*.leonardo.local",
-        "EVAL_BASE_DIR": "/leonardo_work/EUHPC_E03_068/shared_evals",
+        "EVAL_BASE_DIR": "/leonardo_work/AIFAC_L01_028/shared_evals",
         "PARTITION": "boost_usr_prod",
         "ACCOUNT": "AIFAC_L01_028",
         "QUEUE_LIMIT": 1000,

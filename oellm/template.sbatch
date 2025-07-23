@@ -82,7 +82,7 @@ do
             --model_args pretrained="$model_path" \
             --tasks "$task_path" \
             --num_fewshot "$n_shot" \
-            --output_path $EVAL_OUTPUT_DIR \
+            --output_path {evals_dir} \
             --log_samples
 
     echo "Evaluation finished for model: $model_path"

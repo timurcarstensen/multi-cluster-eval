@@ -395,6 +395,7 @@ def schedule_evals(
         array_limit=len(df) - 1,
         num_jobs=len(df),
         log_dir=evals_dir / "slurm_logs",
+        evals_dir=str(evals_dir / "results"),
     )
 
     # substitute any $ENV_VAR occurrences (e.g., $TIME_LIMIT) since env vars are not

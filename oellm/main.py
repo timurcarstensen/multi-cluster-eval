@@ -30,7 +30,7 @@ def ensure_singularity_image(image_name: str) -> None:
 
     logging.info(
         "Singularity image ready at %s",
-        Path(os.getenv("EVAL_SIF_PATH")) / os.getenv("EVAL_CONTAINER_IMAGE"),
+        Path(os.getenv("EVAL_BASE_DIR")) / os.getenv("EVAL_CONTAINER_IMAGE"),
     )
 
 

@@ -114,7 +114,7 @@ def _parse_user_queue_load() -> int:
 
 
 def _process_model_paths(
-    models: Iterable[str], debug: bool = False
+    models: Iterable[str]
 ) -> dict[str, list[Path | str]]:
     """
     Processes model strings into a dict of model paths.
@@ -151,27 +151,24 @@ def _process_model_paths(
                 f"Downloading model {model} on the login node since the compute nodes may not have access to the internet"
             )
 
-            if not debug:
-                if "," in model:
-                    model_kwargs = {
-                        k: v
-                        for k, v in [
-                            kv.split("=") for kv in model.split(",") if "=" in kv
-                        ]
-                    }
-                    model_kwargs["pretrained_model_name_or_path"] = model.split(",")[0]
-                    try:
-                        AutoModelForCausalLM.from_pretrained(**model_kwargs)  # type: ignore[call-arg]
-                        model_paths.append(model)
-                    except Exception as e:
-                        logging.debug(
-                            f"Failed to download model {model} from huggingface. Continuing..."
-                        )
-                        logging.debug(e)
-                else:
-                    AutoModelForCausalLM.from_pretrained(model)
+            if "," in model:
+                model_kwargs = {
+                    k: v
+                    for k, v in [
+                        kv.split("=") for kv in model.split(",") if "=" in kv
+                    ]
+                }
+                model_kwargs["pretrained_model_name_or_path"] = model.split(",")[0]
+                try:
+                    AutoModelForCausalLM.from_pretrained(**model_kwargs)  # type: ignore[call-arg]
                     model_paths.append(model)
+                except Exception as e:
+                    logging.debug(
+                        f"Failed to download model {model} from huggingface. Continuing..."
+                    )
+                    logging.debug(e)
             else:
+                AutoModelForCausalLM.from_pretrained(model)
                 model_paths.append(model)
 
         if not model_paths:
@@ -182,7 +179,7 @@ def _process_model_paths(
     return processed_model_paths
 
 
-def _pre_download_task_datasets(tasks: Iterable[str], debug: bool = False) -> None:
+def _pre_download_task_datasets(tasks: Iterable[str]) -> None:
     """Ensure that all datasets required by the given `tasks` are present in the local 🤗 cache at $HF_HOME."""
 
     try:
@@ -297,7 +294,7 @@ def schedule_evals(
             )
 
         unique_models = df["model_path"].unique()
-        model_path_map = _process_model_paths(unique_models, debug)
+        model_path_map = _process_model_paths(unique_models)
 
         # Create a new DataFrame with the expanded model paths
         expanded_rows = []
@@ -311,7 +308,7 @@ def schedule_evals(
         df = pd.DataFrame(expanded_rows)
 
     elif models and tasks and n_shot is not None:
-        model_path_map = _process_model_paths(models.split(","), debug)
+        model_path_map = _process_model_paths(models.split(","))
         model_paths = [p for paths in model_path_map.values() for p in paths]
         tasks_list = tasks.split(",")
 
@@ -335,16 +332,13 @@ def schedule_evals(
 
     # Ensure that all datasets required by the tasks are cached locally to avoid
     # network access on compute nodes.
-    _pre_download_task_datasets(df["task_path"].unique(), debug)
+    _pre_download_task_datasets(df["task_path"].unique())
 
     if download_only:
         return None
 
-    if debug:
-        remaining_queue_capacity = 10
-    else:
-        queue_limit = int(os.environ.get("QUEUE_LIMIT", 250))
-        remaining_queue_capacity = queue_limit - _parse_user_queue_load()
+    queue_limit = int(os.environ.get("QUEUE_LIMIT", 250))
+    remaining_queue_capacity = queue_limit - _parse_user_queue_load()
 
     if remaining_queue_capacity <= 0:
         logging.warning("No remaining queue capacity. Not scheduling any jobs.")
@@ -394,25 +388,24 @@ def schedule_evals(
     logging.debug(f"Saved sbatch script to {sbatch_script_path}")
 
     # Submit the job script to slurm by piping the script content to sbatch
-    if not debug:
-        try:
-            result = subprocess.run(
-                ["sbatch"],
-                input=sbatch_script,
-                text=True,
-                check=True,
-                capture_output=True,
-                env=os.environ,
-            )
-            logging.info("Job submitted successfully.")
-            logging.info(result.stdout)
-        except subprocess.CalledProcessError as e:
-            logging.error(f"Failed to submit job: {e}")
-            logging.error(f"sbatch stderr: {e.stderr}")
-        except FileNotFoundError:
-            logging.error(
-                "sbatch command not found. Please make sure you are on a system with SLURM installed."
-            )
+    try:
+        result = subprocess.run(
+            ["sbatch"],
+            input=sbatch_script,
+            text=True,
+            check=True,
+            capture_output=True,
+            env=os.environ,
+        )
+        logging.info("Job submitted successfully.")
+        logging.info(result.stdout)
+    except subprocess.CalledProcessError as e:
+        logging.error(f"Failed to submit job: {e}")
+        logging.error(f"sbatch stderr: {e.stderr}")
+    except FileNotFoundError:
+        logging.error(
+            "sbatch command not found. Please make sure you are on a system with SLURM installed."
+        )
 
 
 def main():

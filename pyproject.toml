@@ -12,6 +12,7 @@ dependencies = [
     "torch",
     "rich",
     "lm-eval",
+    "huggingface_hub",
 ]
 
 [project.scripts]

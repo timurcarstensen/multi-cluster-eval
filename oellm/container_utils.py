@@ -4,6 +4,11 @@ import subprocess
 import tempfile
 from pathlib import Path
 from typing import Optional
+import shutil
+
+# Hugging Face Hub utilities (already dependency in pyproject.toml)
+from huggingface_hub import hf_hub_download, HfHubDownloadError  # type: ignore
+import os
 
 
 def _inspect_sif_digest(sif_path: Path) -> Optional[str]:
@@ -43,17 +48,68 @@ def ensure_singularity_image(
     *,
     force: bool = False,
 ) -> None:
-    """Ensure that `sif_path` exists and is (roughly) in sync with `docker_image`.
+    """Ensure that `sif_path` exists, downloading a pre-built SIF from the 🤗 Hub if
+    possible and falling back to building it from *docker_image* otherwise.
 
-    This downloads/builds the SIF in-place using `apptainer build` when necessary.
-    It is safe to call repeatedly; construction is skipped when the file exists
-    unless *force* is True.
+    The function behaves as follows:
+    1. If *sif_path* already exists (and *force* is False) → return immediately.
+    2. Try to download the file *sif_path.name* from a dataset repository on the
+       Hugging Face Hub (defaults to the repo specified by the *HF_SIF_REPO*
+       environment variable or ``timurcarstensen/testing``).  If the download
+       succeeds, copy/rename the cached file to *sif_path* and return.
+    3. If the download fails (e.g. repo/file not found or network issues), build
+       the image locally from *docker_image* using ``singularity build``.
+
+    This keeps the original build-from-Docker logic as a graceful fallback while
+    enabling fast, bandwidth-efficient retrieval of large SIFs (>10 GB) that are
+    inconvenient to store on container registries.
     """
 
     sif_path = sif_path.expanduser().resolve()
+
     if sif_path.exists() and not force:
         logging.debug(f"Re-using existing Singularity image: {sif_path}")
         return
+
+    # ------------------------------------------------------------------
+    # Attempt to obtain the SIF from a Hugging Face Hub dataset first.
+    # ------------------------------------------------------------------
+    hf_repo = os.environ.get("HF_SIF_REPO", "timurcarstensen/testing")
+    hf_token = os.environ.get("HF_TOKEN")  # optional; can rely on cached creds
+    sif_filename = sif_path.name
+
+    try:
+        download_path = hf_hub_download(
+            repo_id=hf_repo,
+            filename=sif_filename,
+            repo_type="dataset",
+            token=hf_token,
+        )
+
+        # hf_hub_download returns a cached path; copy (atomic) into place
+        logging.info("Downloaded %s from 🤗 Hub dataset %s", sif_filename, hf_repo)
+
+        # Use a temporary path in the destination dir then atomic replace
+        tmp_path = sif_path.with_suffix(".tmp")
+        shutil.copy2(download_path, tmp_path)
+        tmp_path.replace(sif_path)
+
+        logging.info("Singularity image ready at %s", sif_path)
+        return
+
+    except HfHubDownloadError as exc:
+        logging.warning(
+            "Could not download %s from 🤗 Hub (%s); falling back to local build.",
+            sif_filename,
+            exc,
+        )
+    except Exception as exc:
+        # Any unexpected error should still trigger fallback build to ensure we
+        # don't block execution.
+        logging.warning(
+            "Unexpected error while downloading SIF from 🤗 Hub: %s. Falling back to build.",
+            exc,
+        )
 
     logging.info(
         (

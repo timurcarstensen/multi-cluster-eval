@@ -74,7 +74,7 @@ jobs:
       - name: Login to Hugging Face Hub
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
-        run: huggingface-cli login --token "$HF_TOKEN" --add-to-git-credential
+        run: huggingface-cli login --token "$HF_TOKEN"  
 
       - name: Upload SIF to Hugging Face Hub
         env:

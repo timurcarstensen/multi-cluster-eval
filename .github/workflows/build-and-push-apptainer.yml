@@ -85,5 +85,4 @@ jobs:
             eval_env-leonardo.sif \
             eval_env-leonardo.sif \
             --repo-type dataset \
-            --commit-message "[chore] update leonardo image" \
-            -y 
+            --commit-message "[chore] update leonardo image"

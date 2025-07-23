@@ -75,7 +75,7 @@ do
     echo "  N-shot: $n_shot"
     echo "----------------------------------------------------"
 
-    apptainer exec --nv \
+    singularity exec $SINGULARITY_ARGS \
         --bind $EVAL_BASE_DIR:$EVAL_BASE_DIR \
         $EVAL_SIF_PATH \
         python -m lm_eval --model hf \

@@ -278,15 +278,11 @@ def schedule_evals(
     # a cluster share the same image under EVAL_SIF_PATH (configured in
     # clusters.json). This avoids the brittle shared-venv approach.
     # ------------------------------------------------------------------
-    docker_image = os.environ.get("EVAL_CONTAINER_IMAGE")
-    sif_path = os.environ.get("EVAL_SIF_PATH")
-
-    if not docker_image or not sif_path:
-        raise ValueError(
-            "Both EVAL_CONTAINER_IMAGE and EVAL_SIF_PATH must be set in the cluster configuration."
-        )
-
-    ensure_singularity_image(docker_image, Path(sif_path), debug)
+    image_name = os.environ.get("EVAL_CONTAINER_IMAGE")
+    if image_name is None:
+        raise ValueError("EVAL_CONTAINER_IMAGE is not set. Please set it in clusters.json.")
+    
+    ensure_singularity_image(image_name)
 
     if eval_csv_path:
         if models or tasks or n_shot:

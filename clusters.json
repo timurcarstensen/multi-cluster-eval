@@ -14,8 +14,9 @@
         "ACCOUNT": "AIFAC_L01_028",
         "QUEUE_LIMIT": 1000,
         "GPUS_PER_NODE": 4,
-        "EVAL_CONTAINER_IMAGE": "ghcr.io/openeurollm/eval_env-leonardo:latest"
-    },
+        "EVAL_CONTAINER_IMAGE": "eval_env-leonardo.sif",
+        "SINGULARITY_ARGS": "--nv"
+    },  
     "jureca": {
         "hostname_pattern": "*.jureca",
         "EVAL_BASE_DIR": "/p/data1/mmlaion/oellm_shared_evals",
@@ -23,7 +24,8 @@
         "ACCOUNT": "synthlaion",
         "QUEUE_LIMIT": 512,
         "GPUS_PER_NODE": 4,
-        "EVAL_CONTAINER_IMAGE": "ghcr.io/openeurollm/eval_env-jureca:latest"
+        "EVAL_CONTAINER_IMAGE": "eval_env-jureca.sif",
+        "SINGULARITY_ARGS": "--nv"
     },
     "lumi": {
         "hostname_pattern": "uan*",
@@ -32,6 +34,7 @@
         "ACCOUNT": "project_462000963",
         "QUEUE_LIMIT": 210,
         "GPUS_PER_NODE": 4,
-        "EVAL_CONTAINER_IMAGE": "ghcr.io/openeurollm/eval_env-lumi:latest"
+        "EVAL_CONTAINER_IMAGE": "eval_env-lumi.sif",
+        "SINGULARITY_ARGS": "--rocm"
     }
 }

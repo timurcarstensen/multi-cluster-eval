@@ -1,3 +1,4 @@
+# Standard library imports
 import json
 import logging
 import os
@@ -10,11 +11,12 @@ from pathlib import Path
 from string import Template
 from typing import Iterable
 
+# Third-party imports
 import pandas as pd
 from jsonargparse import auto_cli
 from rich.console import Console
 from rich.logging import RichHandler
-from transformers import AutoModelForCausalLM
+from huggingface_hub import snapshot_download
 
 # Local utility to manage container images
 from .container_utils import ensure_singularity_image
@@ -123,8 +125,8 @@ def _process_model_paths(
     This function expands directory paths that contain multiple checkpoints.
     """
     processed_model_paths = {}
+    model_paths = []
     for model in models:
-        model_paths = []
         if Path(model).exists() and Path(model).is_dir():
             # could either be the direct path to a local model checkpoint dir or a directory that contains a lot of
             # intermediate checkpoints from training of the structure: `model_name/hf/iter_1`, `model_name/hf/iter_2` ...
@@ -158,17 +160,31 @@ def _process_model_paths(
                         kv.split("=") for kv in model.split(",") if "=" in kv
                     ]
                 }
-                model_kwargs["pretrained_model_name_or_path"] = model.split(",")[0]
+
+                # The first element before the comma is the repository ID on the 🤗 Hub
+                repo_id = model.split(",")[0]
+
+                # snapshot_download kwargs
+                snapshot_kwargs = {}
+                if "revision" in model_kwargs:
+                    snapshot_kwargs["revision"] = model_kwargs["revision"]
+
                 try:
-                    AutoModelForCausalLM.from_pretrained(**model_kwargs)  # type: ignore[call-arg]
+                    # Pre-download (or reuse cache) for the whole repository so that
+                    # compute nodes can load it offline.
+                    snapshot_download(repo_id=repo_id, **snapshot_kwargs)
                     model_paths.append(model)
                 except Exception as e:
                     logging.debug(
-                        f"Failed to download model {model} from huggingface. Continuing..."
+                        f"Failed to download model {model} from Hugging Face Hub. Continuing..."
                     )
                     logging.debug(e)
             else:
-                AutoModelForCausalLM.from_pretrained(model)
+                # Download the entire model repository to the local cache.  The
+                # original identifier is kept in *model_paths* so downstream
+                # code can still reference it; at runtime the files will be
+                # read from cache, allowing offline execution.
+                snapshot_download(repo_id=model)
                 model_paths.append(model)
 
         if not model_paths:

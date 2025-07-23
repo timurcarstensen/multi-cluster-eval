@@ -6,10 +6,8 @@ readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
     "pandas",
-    "transformers",
     "jsonargparse",
     "datasets<4.0.0",
-    "torch",
     "rich",
     "lm-eval",
     "huggingface_hub",

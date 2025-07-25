@@ -86,7 +86,7 @@ do
             MODEL_DIR="$(dirname "$MODEL_DIR")"
         fi
         # Avoid adding duplicate bind if it is already covered by EVAL_BASE_DIR
-        if [[ $MODEL_DIR != ${EVAL_BASE_DIR}* ]]; then
+        if [[ $MODEL_DIR != $EVAL_BASE_DIR* ]]; then
             BIND_PATHS="$BIND_PATHS,$MODEL_DIR:$MODEL_DIR"
         fi
     fi

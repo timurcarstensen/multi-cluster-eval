@@ -75,8 +75,24 @@ do
     echo "  N-shot: $n_shot"
     echo "----------------------------------------------------"
 
+    # Build bind paths: always mount the shared eval directory, and additionally
+    # bind the directory that contains the model checkpoint when the path exists
+    BIND_PATHS="$EVAL_BASE_DIR:$EVAL_BASE_DIR"
+
+    if [ -e "$model_path" ]; then
+        # If the model_path is a file, bind its parent directory; otherwise bind the dir itself
+        MODEL_DIR="$model_path"
+        if [ ! -d "$MODEL_DIR" ]; then
+            MODEL_DIR="$(dirname "$MODEL_DIR")"
+        fi
+        # Avoid adding duplicate bind if it is already covered by EVAL_BASE_DIR
+        if [[ $MODEL_DIR != ${EVAL_BASE_DIR}* ]]; then
+            BIND_PATHS="$BIND_PATHS,$MODEL_DIR:$MODEL_DIR"
+        fi
+    fi
+
     singularity exec $SINGULARITY_ARGS \
-        --bind $EVAL_BASE_DIR:$EVAL_BASE_DIR \
+        --bind $BIND_PATHS \
         $EVAL_SIF_PATH \
         python -m lm_eval --model hf \
             --model_args pretrained="$model_path",trust_remote_code=True \

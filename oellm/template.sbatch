@@ -98,7 +98,7 @@ do
             --model_args pretrained="$model_path",trust_remote_code=True \
             --tasks "$task_path" \
             --num_fewshot "$n_shot" \
-            --output_path "{evals_dir}/$(uuidgen).json" \
+            --output_path "{evals_dir}/$(openssl rand -hex 5).json" \
             --trust_remote_code \
             --log_samples
 

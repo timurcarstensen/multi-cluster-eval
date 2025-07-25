@@ -15,7 +15,6 @@ NUM_JOBS={num_jobs}
 # avoiding crashes due to compute nodes not having access to the internet
 export HF_HOME=$HF_HOME
 export HF_HUB_CACHE="$HF_HOME/hub"
-export TRANSFORMERS_CACHE="$HF_HOME/hub"
 export HF_XET_CACHE="$HF_HOME/xet"
 export HF_ASSETS_CACHE="$HF_HOME/assets"
 export HUGGINGFACE_HUB_CACHE="$HF_HOME/hub"
@@ -106,6 +105,7 @@ do
     MODEL_NAME_SANITIZED=$(echo "$MODEL_NAME" | tr '/\\:*?"<>|' '_')
     MODEL_OUTPUT_DIR={evals_dir}/"$MODEL_NAME_SANITIZED"
     mkdir -p "$MODEL_OUTPUT_DIR"
+    echo "Output directory: $MODEL_OUTPUT_DIR"
 
     singularity exec $SINGULARITY_ARGS \
         --bind $BIND_PATHS \

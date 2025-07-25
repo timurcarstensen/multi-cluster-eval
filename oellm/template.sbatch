@@ -91,6 +91,22 @@ do
         fi
     fi
 
+    # --------------------------------------------
+    # Determine a safe output directory for results
+    # --------------------------------------------
+    # Default to the basename of the model path. When evaluating an individual
+    # checkpoint directory like */hf/iter_XXXXX, we want the top-level model
+    # directory name instead to avoid meaningless names like "iter_0114000".
+    MODEL_NAME="$(basename "$model_path")"
+    if [[ "$MODEL_NAME" == iter_* ]]; then
+        MODEL_NAME="$(basename "$(dirname "$(dirname "$model_path")")")"
+    fi
+    # Replace any characters that may lead to nested paths or be invalid on some
+    # filesystems
+    MODEL_NAME_SANITIZED=$(echo "$MODEL_NAME" | tr '/\\:*?"<>|' '_')
+    MODEL_OUTPUT_DIR={evals_dir}/"$MODEL_NAME_SANITIZED"
+    mkdir -p "$MODEL_OUTPUT_DIR"
+
     singularity exec $SINGULARITY_ARGS \
         --bind $BIND_PATHS \
         $EVAL_SIF_PATH \
@@ -98,7 +114,7 @@ do
             --model_args pretrained="$model_path",trust_remote_code=True \
             --tasks "$task_path" \
             --num_fewshot "$n_shot" \
-            --output_path {evals_dir} \
+            --output_path "$MODEL_OUTPUT_DIR" \
             --trust_remote_code \
             --log_samples
 

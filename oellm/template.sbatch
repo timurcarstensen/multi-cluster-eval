@@ -79,10 +79,11 @@ do
         --bind $EVAL_BASE_DIR:$EVAL_BASE_DIR \
         $EVAL_SIF_PATH \
         python -m lm_eval --model hf \
-            --model_args pretrained="$model_path" \
+            --model_args pretrained="$model_path",trust_remote_code=True \
             --tasks "$task_path" \
             --num_fewshot "$n_shot" \
             --output_path {evals_dir} \
+            --trust_remote_code \
             --log_samples
 
     echo "Evaluation finished for model: $model_path"

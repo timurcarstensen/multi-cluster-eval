@@ -1,8 +1,12 @@
 # OpenEuroLLM Evaluation Package (oellm)
 
-A streamlined package for running large language model evaluations across multiple HPC clusters using SLURM job arrays and Singularity containers. This tool automates the complex orchestration of distributed LLM evaluations while handling cluster-specific configurations, dataset caching, and job scheduling.
+A package for running evaluations across multiple HPC clusters using SLURM job arrays and Singularity containers. 
 
 ## Quick Example
+
+**Prerequisites:**
+- install [uv](https://docs.astral.sh/uv/#installation)
+- Make sure you're part of the [OpenEuroLLM](https://huggingface.co/OpenEuroLLM) organization on HuggingFace and are logged in (i.e., `HF_TOKEN` is set in your environment). 
 
 ```bash
 # Install the package
@@ -21,6 +25,7 @@ This will automatically:
 - Generate a SLURM job array to evaluate all model-task combinations
 - Submit the jobs with appropriate cluster-specific resource allocations
 
+
 ## Installation
 
 Install directly from the git repository using uv:
@@ -30,6 +35,16 @@ uv tool install git+https://github.com/OpenEuroLLM/multi-cluster-eval.git
 ```
 
 This makes the `oellm` command available globally in your shell.
+
+If you've already installed the package, you can run the following command to update it:
+```bash
+uv tool upgrade oellm
+```
+
+If you had previously installed the package from a different source and would like to overwrite it, you can run the following command:
+```bash
+uv tool install git+https://github.com/OpenEuroLLM/multi-cluster-eval.git --force
+```
 
 ## High-Level Evaluation Workflow
 
@@ -62,7 +77,7 @@ The `oellm` package orchestrates distributed LLM evaluations through the followi
   - Mounted shared storage for models, datasets, and output
   - Offline execution using pre-cached resources
 - Uses `lm-evaluation-harness` for the actual model evaluation
-- Outputs results as JSON files with unique identifiers
+- Outputs results as JSON files
 
 ### 5. **Output Organization**
 Results are organized in timestamped directories under `$EVAL_OUTPUT_DIR/$USER/`:
@@ -76,11 +91,11 @@ Results are organized in timestamped directories under `$EVAL_OUTPUT_DIR/$USER/`
 
 ## Supported Clusters
 
-Currently supports three major European HPC clusters:
+Currently supports three HPC clusters:
 
-- **LEONARDO** (Italy) - NVIDIA A100 GPUs, SLURM with boost partitions
-- **LUMI** (Finland) - AMD MI250X GPUs, SLURM with AMD ROCm
-- **JURECA** (Germany) - NVIDIA A100 GPUs, SLURM with dc-gpu partitions
+- **LEONARDO** - NVIDIA A100 GPUs (CUDA)
+- **LUMI** - AMD MI250X GPUs (ROCm)
+- **JURECA** - NVIDIA A100 GPUs (CUDA)
 
 Each cluster has pre-configured:
 - Shared evaluation directories with appropriate quotas
@@ -108,5 +123,3 @@ Run in download-only mode to prepare resources without submitting jobs:
 ```bash
 oellm schedule-eval --models "EleutherAI/pythia-160m" --tasks "hellaswag" --n_shot 0 --download_only
 ```
-
-The package automatically handles the complexity of multi-cluster LLM evaluation, allowing researchers to focus on model development and analysis rather than infrastructure management.

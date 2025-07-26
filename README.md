@@ -36,6 +36,26 @@ uv tool install git+https://github.com/OpenEuroLLM/multi-cluster-eval.git
 
 This makes the `oellm` command available globally in your shell.
 
+### Optional Dependencies
+
+By default, `oellm` installs without `torch` and `lm-eval-harness` to keep the installation lightweight. These dependencies are only needed for **dataset pre-downloading** and are optional since:
+
+- Actual evaluations run inside Singularity containers that already have these dependencies
+- The pre-download feature gracefully skips if the dependencies are not available
+- Most users can rely on the container's dataset caching
+
+To enable dataset pre-downloading, install with the optional dependencies:
+
+```bash
+# For tool installation
+uv tool install git+https://github.com/OpenEuroLLM/multi-cluster-eval.git --extra eval-predownload
+
+# For development (if cloning the repository)
+uv sync --extra eval-predownload
+```
+
+### Updating the Package
+
 If you've already installed the package, you can run the following command to update it:
 ```bash
 uv tool upgrade oellm

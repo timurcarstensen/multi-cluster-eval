@@ -9,9 +9,13 @@ dependencies = [
     "jsonargparse",
     "datasets<4.0.0",
     "rich",
+    "huggingface_hub",
+]
+
+[project.optional-dependencies]
+eval-predownload = [
     "torch",
     "lm-eval",
-    "huggingface_hub",
 ]
 
 [project.scripts]
@@ -26,13 +30,17 @@ module-name = "oellm"
 module-root = ""
 include = ["oellm/clusters.json"]
 
-[tool.uv.sources]
-torch = [
-    { index = "pytorch-cpu" },
-]
-torchvision = [
-    { index = "pytorch-cpu" },
-]
+# Note: torch configuration moved to optional dependencies section
+# Users can install with: uv sync --extra eval-predownload
+# This will install torch from the pytorch-cpu index when explicitly requested
+#
+# [tool.uv.sources]
+# torch = [
+#     { index = "pytorch-cpu" },
+# ]
+# torchvision = [
+#     { index = "pytorch-cpu" },
+# ]
 
 [[tool.uv.index]]
 name = "pytorch-cpu"

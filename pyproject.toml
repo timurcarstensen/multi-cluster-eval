@@ -12,12 +12,6 @@ dependencies = [
     "huggingface_hub",
 ]
 
-[project.optional-dependencies]
-eval-predownload = [
-    "torch",
-    "lm-eval",
-]
-
 [project.scripts]
 oellm = "oellm.main:main"
 
@@ -30,19 +24,5 @@ module-name = "oellm"
 module-root = ""
 include = ["oellm/clusters.json"]
 
-# Note: torch configuration moved to optional dependencies section
-# Users can install with: uv sync --extra eval-predownload
-# This will install torch from the pytorch-cpu index when explicitly requested
-#
-# [tool.uv.sources]
-# torch = [
-#     { index = "pytorch-cpu" },
-# ]
-# torchvision = [
-#     { index = "pytorch-cpu" },
-# ]
-
-[[tool.uv.index]]
-name = "pytorch-cpu"
-url = "https://download.pytorch.org/whl/cpu"
-explicit = true
+# Note: torch and lm-eval-harness dependencies removed to keep installation lightweight
+# Dataset pre-downloading now works directly with HuggingFace datasets library

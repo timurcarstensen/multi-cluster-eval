@@ -36,23 +36,17 @@ uv tool install git+https://github.com/OpenEuroLLM/multi-cluster-eval.git
 
 This makes the `oellm` command available globally in your shell.
 
-### Optional Dependencies
+### Dataset Pre-downloading
 
-By default, `oellm` installs without `torch` and `lm-eval-harness` to keep the installation lightweight. These dependencies are only needed for **dataset pre-downloading** and are optional since:
+`oellm` automatically pre-downloads evaluation datasets to ensure they're available offline on compute nodes. This feature:
 
-- Actual evaluations run inside Singularity containers that already have these dependencies
-- The pre-download feature gracefully skips if the dependencies are not available
-- Most users can rely on the container's dataset caching
+- Uses the HuggingFace `datasets` library (already included as a dependency)
+- Works without requiring `torch` or `lm-eval-harness` 
+- Supports all major evaluation tasks (HellaSwag, MMLU, GSM8K, ARC, etc.)
+- Gracefully handles unknown tasks by skipping them with a warning
+- Uses cached datasets when available to avoid re-downloading
 
-To enable dataset pre-downloading, install with the optional dependencies:
-
-```bash
-# For tool installation
-uv tool install git+https://github.com/OpenEuroLLM/multi-cluster-eval.git --extra eval-predownload
-
-# For development (if cloning the repository)
-uv sync --extra eval-predownload
-```
+The pre-download happens automatically before job submission and covers the most commonly used evaluation benchmarks.
 
 ### Updating the Package
 
